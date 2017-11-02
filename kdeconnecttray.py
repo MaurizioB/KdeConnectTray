@@ -3009,6 +3009,10 @@ class DeviceDialog(QtGui.QDialog):
         if not index.isValid():
             self.pairBtn.setEnabled(False)
             return
+        if not self.deviceModel.itemFromIndex(index).isEnabled():
+            self.pairBtn.setEnabled(False)
+            self.OkBtn.setEnabled(False)
+            return
         paired = index.sibling(index.row(), 2).data(QtCore.Qt.CheckStateRole).toBool()
         if paired:
             self.pairBtn.setEnabled(False)
