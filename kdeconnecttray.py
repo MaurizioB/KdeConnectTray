@@ -325,11 +325,11 @@ class Notification(QtCore.QObject):
         self.id = int(id)
         self.proxy = self.dbus.get_object('org.kde.kdeconnect', '/modules/kdeconnect/devices/{}/notifications/{}'.format(self.phone.id, self.id))
 #        props = dbus.Interface(self.proxy, dbus_interface='org.kde.kdeconnect.device.notifications.notification')
-        self.props = dbus.Interface(self.proxy, dbus_interface='org.freedesktop.DBus.Properties')
-        self.app = unicode(self.props.Get('org.kde.kdeconnect.device.notifications.notification', 'appName'))
-        self.ticker = unicode(self.props.Get('org.kde.kdeconnect.device.notifications.notification', 'ticker'))
+        self.propsIface = dbus.Interface(self.proxy, dbus_interface='org.freedesktop.DBus.Properties')
+        self.app = unicode(self.propsIface.Get('org.kde.kdeconnect.device.notifications.notification', 'appName'))
+        self.ticker = unicode(self.propsIface.Get('org.kde.kdeconnect.device.notifications.notification', 'ticker'))
 #        print self.ticker, self.app
-        self.dismissable = self.props.Get('org.kde.kdeconnect.device.notifications.notification', 'dismissable')
+        self.dismissable = self.propsIface.Get('org.kde.kdeconnect.device.notifications.notification', 'dismissable')
 
     @property
     def time(self):
@@ -381,6 +381,7 @@ class Device(QtCore.QObject):
     notificationsChanged = QtCore.pyqtSignal()
     newNotification = QtCore.pyqtSignal(object)
     missingRequiredPlugin = QtCore.pyqtSignal(bool)
+    pluginsChanged = QtCore.pyqtSignal()
 
     def __init__(self, deviceID):
         QtCore.QObject.__init__(self)
@@ -396,17 +397,17 @@ class Device(QtCore.QObject):
         self.batteryIface = None
         self.notificationIface = None
         self._notifications = NotificationDict(self)
+        self.loadedPlugins = []
 
     def setProxy(self, bus):
         self.dbus = bus
         self.proxy = self.dbus.get_object('org.kde.kdeconnect', '/modules/kdeconnect/devices/{}'.format(self.id))
-#        print dir(self.proxy)
-        self.props = dbus.Interface(self.proxy, dbus_interface='org.freedesktop.DBus.Properties')
-        self.reachable = self.props.Get('org.kde.kdeconnect.device', 'isReachable')
+        self.propsIface = dbus.Interface(self.proxy, dbus_interface='org.freedesktop.DBus.Properties')
+        self.reachable = self.propsIface.Get('org.kde.kdeconnect.device', 'isReachable')
 
         self.devIface = dbus.Interface(self.proxy, dbus_interface='org.kde.kdeconnect.device')
-        self.devIface.connect_to_signal('reachableStatusChanged', lambda: self.setReachable(self.props.Get('org.kde.kdeconnect.device', 'isReachable')))
-        self.devIface.connect_to_signal('pluginsChanged', self.pluginsChanged)
+        self.devIface.connect_to_signal('reachableStatusChanged', lambda: self.setReachable(self.propsIface.Get('org.kde.kdeconnect.device', 'isReachable')))
+        self.devIface.connect_to_signal('pluginsChanged', self.pluginsChangedCheck)
 #            self.phoneDeviceProps.connect_to_signal('PropertiesChanged', self.reachable)
         self.batteryIface = dbus.Interface(self.proxy, dbus_interface='org.kde.kdeconnect.device.battery')
         self.batteryIface.connect_to_signal('chargeChanged', self.setBattery)
@@ -417,20 +418,28 @@ class Device(QtCore.QObject):
         self.notificationIface.connect_to_signal('notificationRemoved', self.notificationRemoved)
         self.notificationIface.connect_to_signal('allNotificationsRemoved', self.allNotificationsRemoved)
 
-        self.name = self.props.Get('org.kde.kdeconnect.device', 'name')
+        self.findMyPhoneIface = dbus.Interface(
+            self.dbus.get_object('org.kde.kdeconnect', '/modules/kdeconnect/devices/{}/findmyphone'.format(self.id)), 
+            dbus_interface='org.kde.kdeconnect.device.findmyphone')
+
+        self.name = self.propsIface.Get('org.kde.kdeconnect.device', 'name')
         self.battery = self.batteryIface.charge()
         self.charging = self.batteryIface.isCharging()
         self.createNotifications()
 
+
     def hasMissingRequiredPlugins(self):
-        loadedPlugins = map(unicode, self.devIface.loadedPlugins())
-        requiredFound = KdeConnectRequiredPlugins & set(loadedPlugins)
-        print True if requiredFound != KdeConnectRequiredPlugins else False
+        self.loadedPlugins = map(unicode, self.devIface.loadedPlugins())
+        requiredFound = KdeConnectRequiredPlugins & set(self.loadedPlugins)
         return True if requiredFound != KdeConnectRequiredPlugins else False
 
-    def pluginsChanged(self):
+    def findMyPhone(self):
+        self.findMyPhoneIface.ring()
+
+    def pluginsChangedCheck(self):
         if not self.reachable:
             return
+        QtCore.QTimer.singleShot(1000, self.pluginsChanged.emit)
         if not self.hasMissingRequiredPlugins():
             self.missingRequiredPlugin.emit(False)
             return
@@ -503,7 +512,7 @@ class Device(QtCore.QObject):
 
     @property
     def battery(self):
-#        self.props.Get('org.kde.kdeconnect.device.battery', 'charge')
+#        self.propsIface.Get('org.kde.kdeconnect.device.battery', 'charge')
         return self._battery
 
     @battery.setter
@@ -2662,7 +2671,16 @@ class KdeConnect(QtGui.QSystemTrayIcon):
             self.tooltipWidget.hide()
             self.tooltipWidget.mouseTimer.stop()
         self.menu = QtGui.QMenu()
+        self.menu.setSeparatorsCollapsible(False)
         self.menu.showEvent = showEvent
+        header = QtGui.QAction('KdeConnectTray', self.menu)
+        header.setIcon(QtGui.QIcon('kdeconnect-tray-off.svg'))
+        header.setSeparator(True)
+        findMyPhoneAction = QtGui.QAction('Find my phone', self.menu)
+        findMyPhoneAction.setIcon(QtGui.QIcon.fromTheme('edit-find'))
+        findMyPhoneAction.triggered.connect(self.phone.findMyPhone)
+        sep = QtGui.QAction(self.menu)
+        sep.setSeparator(True)
         historyAction = QtGui.QAction('History...', self.menu)
         historyAction.setIcon(QtGui.QIcon.fromTheme('document-open-recent'))
         historyAction.triggered.connect(lambda: (showCenter(self.historyDialog), self.historyDialog.activateWindow()))
@@ -2679,8 +2697,17 @@ class KdeConnect(QtGui.QSystemTrayIcon):
         quitAction = QtGui.QAction('Quit', self.menu)
         quitAction.setIcon(QtGui.QIcon.fromTheme('application-exit'))
         quitAction.triggered.connect(self.quit)
-        self.menu.addActions([historyAction, settingsAction, aboutSep, aboutAction, quitSep, quitAction])
+        self.menu.addActions([header, findMyPhoneAction, sep, historyAction, settingsAction, aboutSep, aboutAction, quitSep, quitAction])
         self.setContextMenu(self.menu)
+        self.phone.pluginsChanged.connect(
+            lambda: findMyPhoneAction.setEnabled(
+                True if self.phone.reachable and 'kdeconnect_findmyphone' in self.phone.loadedPlugins else False))
+        #this connection is delayed since it might take a while for plugins to load once the device has become reachable
+        self.phone.reachableChanged.connect(
+            lambda reachable: findMyPhoneAction.setEnabled(False) if not reachable else \
+                QtCore.QTimer.singleShot(2000, 
+                lambda: findMyPhoneAction.setEnabled(
+                    True if reachable and 'kdeconnect_findmyphone' in self.phone.loadedPlugins else False)))
 
     def about(self):
         def keyPressEvent(event):
@@ -2893,7 +2920,7 @@ class DeviceDialog(QtGui.QDialog):
         res = QtGui.QDialog.exec_(self)
         if not res:
             return res
-        devID = self.deviceTable.currentIndex().sibling(self.deviceTable.currentIndex().row(), 0).data().toPyObject()
+        devID = unicode(self.deviceTable.currentIndex().sibling(self.deviceTable.currentIndex().row(), 0).data().toPyObject())
         devProxy = dbus.SessionBus().get_object('org.kde.kdeconnect', '/modules/kdeconnect/devices/' + devID)
         devIface = dbus.Interface(devProxy, dbus_interface='org.kde.kdeconnect.device')
         loadedPlugins = set(map(unicode, devIface.loadedPlugins()))
