@@ -619,20 +619,24 @@ class CustomIcon(QtCore.QObject):
 #        green = self.phone.battery * 2.55
 #        red = 255 - green
         qp.setPen(QtGui.QPen(QtGui.QColor(*batteryColor(self.phone.battery)), 2))
-        qp.drawLine(1, size.height() - 2, 1, size.height() - 1 - (size.height() - 2) * self.phone.battery * .01)
-        notiSize = size.height() / 3.
+        qp.drawLine(3, size.height() - 2, 3, size.height() - 1 - (size.height() - 2) * self.phone.battery * .01)
+        notiSize = size.height() / 2.5
         if self.phone.notifications:
-            notiRect = QtCore.QRectF(size.width() - 1, size.height() - 1, -notiSize, -notiSize)
             qp.setBrush(QtCore.Qt.white)
-            qp.setPen(QtCore.Qt.NoPen)
-            qp.drawEllipse(notiRect)
-            qp.setPen(QtCore.Qt.black)
+            qp.setPen(QtCore.Qt.darkGray)
             font = QtGui.QFont()
-            font.setPointSizeF(notiSize - 1)
+            font.setPointSizeF(notiSize - 2)
             qp.setFont(font)
+            notifLen = len(self.phone.notifications)
+            if notifLen < 10:
+                notiRect = QtCore.QRectF(size.width() - 1, size.height() - 1, -notiSize, -notiSize)
+                qp.drawEllipse(notiRect)
+            else:
+                notiRect = QtCore.QRectF(size.width() - 1, size.height() - 1, -QtGui.QFontMetrics(font).width('00') - 2, -notiSize)
+                qp.drawRect(notiRect)
+            qp.setPen(QtCore.Qt.black)
             qp.drawText(notiRect, QtCore.Qt.AlignCenter, str(len(self.phone.notifications)))
         if self.phone.charging:
-#            notiRect = QtCore.QRectF(3, size.height() - 1, notiSize, -notiSize)
             qp.setBrush(QtGui.QColor(50, 200, 255))
             qp.setPen(QtGui.QPen(QtCore.Qt.darkGray, .5))
             path = QtGui.QPainterPath()
@@ -786,10 +790,25 @@ class NotificationLabel(QtGui.QTextEdit):
         sep = QtGui.QAction(self)
         sep.setSeparator(True)
         self.hideAction = QtGui.QAction('Hide notification', self)
+        self.hideAction.setEnabled(True if self.notification.dismissable else False)
         self.hideAllAction = QtGui.QAction('Hide all notifications', self)
         self.menu.addActions([self.copySelAction, self.copyAction, self.copyNotificationAction, self.urlSeparator, self.openUrlAction, self.copyUrlAction, sep, self.hideAction, self.hideAllAction])
         self.setMaximumHeight(1)
         self.setMouseTracking(True)
+        self.setStyleSheet('border: 1px solid transparent; border-radius: 2px; background: transparent; color: white;')
+        self.hoverBorderAnimation = QtCore.QPropertyAnimation(self, 'color')
+        self.hoverBorderAnimation.setDuration(150)
+        self.hoverBorderAnimation.setStartValue(QtGui.QColor(0, 0, 0, 0))
+        self.hoverBorderAnimation.setEndValue(QtGui.QColor(50, 50, 50, 255))
+
+    @QtCore.pyqtProperty(QtGui.QColor)
+    def color(self):
+        return QtGui.QColor()
+
+    @color.setter
+    def color(self, color):
+        r, g, b, a = color.getRgb()
+        self.setStyleSheet('border: 1px solid rgba({r},{g},{b},{a}); border-radius: 2px; background: rgba(25,25,25,{a}); color: white;'.format(r=r, g=g, b=b, a=a))
 
     def setLabel(self):
         self.setText(u'{icon}<b>{app}</b><br/>{ticker}'.format(
@@ -811,9 +830,13 @@ class NotificationLabel(QtGui.QTextEdit):
             self.viewport().setCursor(QtCore.Qt.ArrowCursor)
 
     def leaveEvent(self, event):
+        self.hoverBorderAnimation.setDirection(self.hoverBorderAnimation.Backward)
+        self.hoverBorderAnimation.start()
         self.viewport().setCursor(QtCore.Qt.ArrowCursor)
 
     def enterEvent(self, event):
+        self.hoverBorderAnimation.setDirection(self.hoverBorderAnimation.Forward)
+        self.hoverBorderAnimation.start()
         self.viewport().setCursor(QtCore.Qt.ArrowCursor)
 
     def showEvent(self, event):
@@ -885,9 +908,11 @@ class ToolTipWidget(QtGui.QWidget):
         palette.setColor(QtGui.QPalette.Foreground, QtCore.Qt.white)
         self.setPalette(palette)
         layout = QtGui.QGridLayout()
+        layout.setVerticalSpacing(2)
         layout.setContentsMargins(4, 4, 4, 4)
         self.setLayout(layout)
         header = QtGui.QHBoxLayout()
+        header.setSpacing(4)
         layout.addLayout(header, 0, 0)
         self.nameLabel = QtGui.QLabel()
         header.addWidget(self.nameLabel)
@@ -935,13 +960,19 @@ class ToolTipWidget(QtGui.QWidget):
             ))
         self.spacer.setVisible(True if self.phone.notifications else False)
         delete = set()
+        dismissable = []
+        normal = []
         showUndismissable = self.settings.value('showUndismissable')
         for id in sorted(self.phone.notifications.keys()):
             n = self.phone.notifications[id]
-            if not showUndismissable and not n.dismissable:
-                if n in self.notifications:
+            if not n.dismissable:
+                if not showUndismissable:
                     delete.add(n)
-                continue
+                else:
+                    dismissable.append(n)
+            else:
+                normal.append(n)
+        for n in dismissable + normal:
             if n in self.notifications:
                 continue
             label = NotificationLabel(self.main, n)
