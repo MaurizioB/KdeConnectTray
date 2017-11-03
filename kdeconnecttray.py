@@ -70,6 +70,23 @@ KdeConnectPlugins = {
 
 KdeConnectRequiredPlugins = set(p for p, d in KdeConnectPlugins.items() if d.required)
 
+KdeConnectPluginsDescriptions = {
+    'kdeconnect_pausemusic': 'Pause media player whenever a phone call starts (requires SystemSettings configuration)', 
+    'kdeconnect_findmyphone': 'Make the device "ring", in case you lost it and cannot find it (not required, but suggested)', 
+    'kdeconnect_share': 'Share files, links and text with the device (requires SystemSettings configuration)', 
+    'kdeconnect_mpriscontrol': 'Control the media player', 
+    'kdeconnect_ping': '"Ping" the device, useful to check if it is actually connected and paired', 
+    'kdeconnect_telephony': 'Receive notifications on phone calls and SMS messages', 
+    'kdeconnect_notifications': 'Synchronize device notifications with this computer (required)', 
+    'kdeconnect_mousepad': 'Control mouse and keyboard input from the remote device', 
+    'kdeconnect_sftp': 'Browse the device file system', 
+    'kdeconnect_clipboard': 'Share clipboard content between this computer and the device', 
+    'kdeconnect_sendnotifications': 'Show desktop notifications on the device (requires SystemSettings configuration)', 
+    'kdeconnect_screensaver_inhibit': 'Disable screensaver when device is reachable', 
+    'kdeconnect_runcommand': 'Run local commands on this computer from the device', 
+    'kdeconnect_battery': 'Synchronize the device battery status (required)', 
+    }
+
 settingsWidgets = {
 #    General settings
     'desktopNotifications': SettingsWidgetData(CHECKBOX, True), 
@@ -1520,6 +1537,7 @@ class PluginsDialog(QtGui.QDialog):
             pluginItem = QtGui.QStandardItem(pluginName)
             pluginItem.setEnabled(not pluginRequired)
             pluginItem.setData(plugin, PluginRole)
+            pluginItem.setData(KdeConnectPluginsDescriptions[plugin], QtCore.Qt.ToolTipRole)
             editableItem = QtGui.QStandardItem()
             editableItem.setData(2 if plugin in availablePlugins else 0, QtCore.Qt.CheckStateRole)
             editableItem.setCheckable(True)
