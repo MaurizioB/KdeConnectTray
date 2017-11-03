@@ -976,19 +976,16 @@ class ToolTipWidget(QtGui.QWidget):
             if n in self.notifications:
                 continue
             label = NotificationLabel(self.main, n)
-#            label.setWordWrap(True)
             btn = QtGui.QPushButton()
             if n.dismissable:
                 label.hideNotification.connect(self.dismissNotification)
                 label.hideAllNotifications.connect(lambda: [self.dismissNotification(n) for n in self.notifications.keys()])
-#                btn.setVisible(True if n.dismissable else False)
                 btn.setIcon(self.style().standardIcon(QtGui.QStyle.SP_DialogCloseButton))
                 btn.setMaximumSize(22, 22)
                 btn.clicked.connect(lambda state, n=n: self.dismissNotification(n))
                 self.notificationLayout.addWidget(label)
                 self.notificationLayout.addWidget(btn, self.notificationLayout.rowCount() - 1, 1)
             else:
-#                btn.setVisible(False)
                 self.notificationLayout.addWidget(label, self.notificationLayout.rowCount(), 0, 1, 2)
             self.notifications[n] = label, btn
 #            print self.sizeHint()
