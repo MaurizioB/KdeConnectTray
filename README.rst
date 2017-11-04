@@ -36,7 +36,7 @@ Ok, let's get serious. I promise, I will add a small tutorial about this.
 Keep in mind that this is an early release, and still needs a lot of work and 
 fixes (and refactoring, I know).
 
-For now it just works (or should) by running the ``kdeconnecttray.py`` script.
+For now it just works (or should) by running the ``KdeConnectTray`` script.
 
 Once started it will try to find available devices in the current network with 
 the KdeConnect app installed. Select the device and press "Ok". If the device has
