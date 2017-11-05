@@ -11,7 +11,7 @@ Features
 --------
 
 - Device pairing, without the need of Kde's SystemSettings (which is still
-  required for some plugins custom configuration).
+  required for *some* plugins custom configuration).
 - Device notifications management.
 - Energy monitoring (battery status and charge/discharge extimation)
 - Usage and notification statistics

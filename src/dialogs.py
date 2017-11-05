@@ -2,10 +2,215 @@
 # *-* coding: utf-8 *-*
 
 import dbus
+import gettext
+import uuid
+import json
 from PyQt4 import QtCore, QtGui
 from src.utils import *
 from src.constants import *
 from src.classes import *
+
+
+class BasePluginDialog(QtGui.QDialog):
+    def __init__(self, parent, config):
+        QtGui.QDialog.__init__(self, parent)
+        self.layout = QtGui.QVBoxLayout()
+        self.setLayout(self.layout)
+        self.contentLayout = QtGui.QGridLayout()
+        self.buttonBox = QtGui.QDialogButtonBox(QtGui.QDialogButtonBox.Ok|QtGui.QDialogButtonBox.Cancel|QtGui.QDialogButtonBox.RestoreDefaults)
+        self.restoreBtn = self.buttonBox.button(self.buttonBox.RestoreDefaults)
+        self.restoreBtn.setIcon(QtGui.QIcon.fromTheme('edit-undo'))
+        self.okBtn = self.buttonBox.button(self.buttonBox.Ok)
+        self.okBtn.clicked.connect(self.apply)
+        self.buttonBox.button(self.buttonBox.Cancel).clicked.connect(self.reject)
+        self.layout.addLayout(self.contentLayout)
+        self.layout.addWidget(self.buttonBox)
+        self.settings = QtCore.QSettings(config, QtCore.QSettings.NativeFormat)
+
+
+#class PluginSendNotifications(BasePluginDialog):
+#    def __init__(self, parent, config):
+#        BasePluginDialog.__init__(self, parent, config)
+#        t = gettext.translation('kdeconnect-plugins', '/usr/share/locale', fallback=True)
+#        _ = t.ugettext
+#        self.setWindowTitle(_('Send notifications'))
+#        self.settings.beginGroup('applications')
+#        for appValue in self.settings.childGroups():
+##            self.settings.beginGroup(appValue)
+#            print [k for k in self.settings.childKeys()]
+#            print self.settings.value('size').toPyObject()
+##            self.settings.endGroup()
+##        print [v for v in self.settings.childGroups()]
+#        self.settings.endGroup()
+#
+#    def apply(self):
+#        pass
+
+
+class PluginRunCommands(BasePluginDialog):
+    def __init__(self, parent, config):
+        BasePluginDialog.__init__(self, parent, config)
+        t = gettext.translation('kdeconnect-plugins', '/usr/share/locale', fallback=True)
+        _ = t.ugettext
+        self.setWindowTitle(_('Run commands'))
+        layout = self.contentLayout
+        self.cmdModel = QtGui.QStandardItemModel()
+        self.cmdTable = QtGui.QTableView()
+        self.cmdTable.setModel(self.cmdModel)
+        layout.addWidget(self.cmdTable)
+        self.cmdTable.verticalHeader().setVisible(False)
+        self.resetModel()
+        count = 0
+        for id, cmdDict in json.loads(unicode(self.settings.value('commands').toString())).items():
+            name = cmdDict['name']
+            cmd = cmdDict['command']
+            nameItem = QtGui.QStandardItem(name)
+            nameItem.setData(id.strip('{}'))
+            cmdItem = QtGui.QStandardItem(cmd)
+            self.cmdModel.appendRow([nameItem, cmdItem])
+            count += 1
+        self.addEmptyCmdItem()
+        self.cmdTable.resizeColumnToContents(0)
+        self.cmdTable.horizontalHeader().setResizeMode(1, QtGui.QHeaderView.Stretch)
+        self.cmdModel.dataChanged.connect(self.updateCmds)
+        self.restoreBtn.clicked.connect(self.resetModel)
+
+    def updateCmds(self, index, _):
+        for row in xrange(self.cmdModel.rowCount()):
+            nameItem = self.cmdModel.item(row, 0)
+            cmdItem = self.cmdModel.item(row, 1)
+            if not nameItem.text() and not cmdItem.text():
+                continue
+            if not nameItem.text() or not cmdItem.text():
+                self.okBtn.setEnabled(False)
+                break
+        else:
+            self.okBtn.setEnabled(True)
+        if self.cmdModel.item(self.cmdModel.rowCount() - 1, 0).text() and self.cmdModel.item(self.cmdModel.rowCount() - 1, 0).text():
+            prevRow = self.cmdModel.rowCount() - 1
+            if self.cmdModel.item(prevRow, 0).text() and self.cmdModel.item(prevRow, 1).text():
+                self.addEmptyCmdItem()
+
+    def resetModel(self):
+        t = gettext.translation('kdeconnect-plugins', '/usr/share/locale', fallback=True)
+        _ = t.ugettext
+        self.cmdModel.clear()
+        self.cmdModel.setHorizontalHeaderLabels([_('Name'), _('Command')])
+
+    def addEmptyCmdItem(self):
+        emptyNameItem = QtGui.QStandardItem()
+        emptyNameItem.setData(unicode(uuid.uuid4()))
+        self.cmdModel.appendRow([emptyNameItem, QtGui.QStandardItem()])
+
+    def apply(self):
+        cmdDict = {}
+        for row in xrange(self.cmdModel.rowCount()):
+            nameItem = self.cmdModel.item(row, 0)
+            name = unicode(nameItem.text())
+            cmdId = unicode(nameItem.data(QtCore.Qt.UserRole + 1).toPyObject())
+            cmd = unicode(self.cmdModel.item(row, 1).text())
+            if not (name and cmd):
+                continue
+            if not cmdId:
+                cmdId = unicode(uuid.uuid4())
+            cmdDict[cmdId] = {'command': cmd, 'name': name}
+        self.settings.setValue('commands', json.dumps(cmdDict))
+        self.settings.sync()
+        self.accept()
+
+
+class PluginShare(BasePluginDialog):
+    defaults = {
+        'incoming_path': os.path.expanduser('~/Downloads')
+        }
+
+    def __init__(self, parent, config):
+        BasePluginDialog.__init__(self, parent, config)
+        t = gettext.translation('kdeconnect-plugins', '/usr/share/locale', fallback=True)
+        _ = t.ugettext
+        self.setWindowTitle(_('Share and receive'))
+        groupBox = QtGui.QGroupBox()
+        self.contentLayout.addWidget(groupBox)
+        layout = QtGui.QGridLayout()
+        groupBox.setLayout(layout)
+        editLbl = QtGui.QLabel(_('Save files in:'))
+        layout.addWidget(editLbl)
+        self.folderEdit = QtGui.QLineEdit(self.settings.value('incoming_path', self.defaults['incoming_path']).toString())
+        layout.addWidget(self.folderEdit, 0, 1)
+        browseBtn = QtGui.QPushButton()
+        browseBtn.setIcon(QtGui.QIcon.fromTheme('document-open'))
+        browseBtn.clicked.connect(self.browse)
+        layout.addWidget(browseBtn, 0, 2)
+        footerLbl = QtGui.QLabel(_('&percnt;1 in the path will be replaced with the specific device name.'))
+        footerLbl.setTextFormat(QtCore.Qt.RichText)
+        layout.addWidget(footerLbl, 1, 0, 1, 3)
+        self.restoreBtn.clicked.connect(lambda:
+            self.folderEdit.setText(self.defaults['incoming_path'])
+            )
+
+    def browse(self):
+        dirName = QtGui.QFileDialog.getExistingDirectory(self, 
+            u'Select folder for download',  
+            os.path.expanduser('~')
+            )
+        if not dirName:
+            return
+        self.folderEdit.setText(dirName)
+
+    def apply(self):
+        self.settings.setValue('incoming_path', self.folderEdit.text())
+        self.settings.sync()
+        self.accept()
+
+
+class PluginPauseMusic(BasePluginDialog):
+    defaults = {
+        'actionMute': False, 
+        'actionPause': True, 
+        'conditionTalking': False, 
+        }
+    def __init__(self, parent, config):
+        BasePluginDialog.__init__(self, parent, config)
+        t = gettext.translation('kdeconnect-plugins', '/usr/share/locale', fallback=True)
+        _ = t.ugettext
+        self.setWindowTitle(_('Pause media players'))
+        layout = self.contentLayout
+        conditionGroupBox = QtGui.QGroupBox(_('Condition'))
+        layout.addWidget(conditionGroupBox)
+        conditionLayout = QtGui.QVBoxLayout()
+        conditionGroupBox.setLayout(conditionLayout)
+        self.conditionGroup = QtGui.QButtonGroup()
+        conditionRingRadio = QtGui.QRadioButton(_('Pause as soon as phone rings'))
+        self.conditionGroup.addButton(conditionRingRadio, 0)
+        conditionTalkRadio = QtGui.QRadioButton(_('Pause only while talking'))
+        self.conditionGroup.addButton(conditionTalkRadio, 1)
+        conditionLayout.addWidget(conditionRingRadio)
+        conditionLayout.addWidget(conditionTalkRadio)
+        self.conditionGroup.button(self.settings.value('conditionTalking', self.defaults['conditionTalking']).toBool()).setChecked(True)
+
+        actionsGroupBox = QtGui.QGroupBox(_('Actions'))
+        layout.addWidget(actionsGroupBox)
+        actionsLayout = QtGui.QVBoxLayout()
+        actionsGroupBox.setLayout(actionsLayout)
+        self.actionPauseChk = QtGui.QCheckBox(_('Pause media players'))
+        actionsLayout.addWidget(self.actionPauseChk)
+        self.actionPauseChk.setChecked(self.settings.value('actionPause', self.defaults['actionPause']).toBool())
+        self.actionMuteChk = QtGui.QCheckBox(_('Mute system sound'))
+        actionsLayout.addWidget(self.actionMuteChk)
+        self.actionMuteChk.setChecked(self.settings.value('actionMute', self.defaults['actionMute']).toBool())
+        self.restoreBtn.clicked.connect(lambda:
+            (self.conditionGroup.button(int(self.defaults['conditionTalking'])).setChecked(True), 
+            self.actionPauseChk.setChecked(True if self.defaults['actionPause'] else False), 
+            self.actionMuteChk.setChecked(True if self.defaults['actionMute'] else False), 
+            ))
+
+    def apply(self):
+        self.settings.setValue('conditionTalking', bool(self.conditionGroup.checkedId()))
+        self.settings.setValue('actionPause', self.actionPauseChk.isChecked())
+        self.settings.setValue('actionMute', self.actionMuteChk.isChecked())
+        self.settings.sync()
+        self.accept()
+
 
 class CheckBoxDelegate(QtGui.QStyledItemDelegate):
     square_pen_enabled = QtGui.QColor(QtCore.Qt.darkGray)
@@ -742,6 +947,12 @@ class HistoryDialog(QtGui.QDialog):
 
 
 class PluginsDialog(QtGui.QDialog):
+    pluginDialogs = {
+        'kdeconnect_pausemusic': PluginPauseMusic, 
+        'kdeconnect_share': PluginShare, 
+        'kdeconnect_runcommand': PluginRunCommands, 
+#        'kdeconnect_sendnotifications': PluginSendNotifications, 
+        }
     def __init__(self, parent, deviceID, devProxy):
         QtGui.QDialog.__init__(self, parent)
         layout = QtGui.QGridLayout()
@@ -758,49 +969,86 @@ class PluginsDialog(QtGui.QDialog):
 
         self.settings = QtCore.QSettings(self.devIface.pluginsConfigFile(), QtCore.QSettings.NativeFormat)
 
-        self.pluginsTable = QtGui.QTableView()
+        self.pluginsTable = QtGui.QTableWidget(len(propsIface.Get('org.kde.kdeconnect.device', 'supportedPlugins')), 3)
         layout.addWidget(self.pluginsTable)
-        self.pluginsModel = QtGui.QStandardItemModel()
-        self.pluginsTable.setModel(self.pluginsModel)
-        self.pluginsTable.setItemDelegateForColumn(1, CheckBoxDelegate())
+#        self.pluginsModel = QtGui.QStandardItemModel()
+#        self.pluginsTable.setModel(self.pluginsModel)
+#        self.pluginsTable.setItemDelegateForColumn(1, CheckBoxDelegate())
         self.pluginsTable.setSelectionMode(self.pluginsTable.NoSelection)
         self.pluginsTable.setEditTriggers(self.pluginsTable.NoEditTriggers)
         self.pluginsTable.setVerticalScrollMode(self.pluginsTable.ScrollPerPixel)
         self.pluginsTable.horizontalHeader().setVisible(False)
         self.pluginsTable.verticalHeader().setVisible(False)
         availablePlugins = self.devIface.loadedPlugins()
-        for plugin in sorted(propsIface.Get('org.kde.kdeconnect.device', 'supportedPlugins')):
+        for row, plugin in enumerate(sorted(propsIface.Get('org.kde.kdeconnect.device', 'supportedPlugins'))):
             plugin = unicode(plugin)
-            pluginName, pluginRequired = KdeConnectPlugins[plugin]
-            pluginItem = QtGui.QStandardItem(pluginName)
-            pluginItem.setEnabled(not pluginRequired)
-            pluginItem.setData(plugin, PluginRole)
-            pluginItem.setData(KdeConnectPluginsDescriptions[plugin], QtCore.Qt.ToolTipRole)
-            editableItem = QtGui.QStandardItem()
-            editableItem.setData(2 if plugin in availablePlugins else 0, QtCore.Qt.CheckStateRole)
-            editableItem.setCheckable(True)
-            editableItem.setEnabled(not pluginRequired)
-            self.pluginsModel.appendRow([pluginItem, editableItem])
+            pluginName, pluginRequired, pluginEditable, pluginEnabled = KdeConnectPlugins[plugin]
+            pluginItem = QtGui.QTableWidgetItem(pluginName)
+            pluginItem.setData(PluginRole, plugin)
+            pluginItem.setData(QtCore.Qt.ToolTipRole, KdeConnectPluginsDescriptions[plugin])
+            self.pluginsTable.setItem(row, 1, pluginItem)
+
+            editableItem = QtGui.QPushButton()
+            editableItem.setIcon(QtGui.QIcon.fromTheme('preferences-other'))
+            if pluginEditable:
+                self.pluginsTable.setCellWidget(row, 2, editableItem)
+                editableItem.clicked.connect(lambda state, plugin=plugin: self.showPluginDialog(plugin))
+
+            selectableItem = QtGui.QTableWidgetItem()
+            selectableItem.setFlags(selectableItem.flags() | QtCore.Qt.ItemIsUserCheckable)
+            self.pluginsTable.setItem(row, 0, selectableItem)
+
+            if plugin in availablePlugins:
+                selectableItem.setCheckState(2)
+                editableItem.setEnabled(True if pluginEnabled else False)
+            else:
+                selectableItem.setCheckState(0)
+                editableItem.setEnabled(False)
+            if pluginRequired:
+                pluginItem.setFlags(pluginItem.flags() ^ QtCore.Qt.ItemIsEnabled)
+                selectableItem.setFlags(selectableItem.flags() ^ QtCore.Qt.ItemIsEnabled)
         self.pluginsTable.resizeColumnsToContents()
         self.pluginsTable.resizeRowsToContents()
-        self.pluginsTable.horizontalHeader().setResizeMode(0, QtGui.QHeaderView.Stretch)
-        self.pluginsTable.horizontalHeader().setResizeMode(1, QtGui.QHeaderView.Fixed)
+        self.pluginsTable.horizontalHeader().setResizeMode(0, QtGui.QHeaderView.Fixed)
+        self.pluginsTable.horizontalHeader().setResizeMode(1, QtGui.QHeaderView.Stretch)
+        self.pluginsTable.horizontalHeader().setResizeMode(2, QtGui.QHeaderView.Fixed)
         self.buttonBox = QtGui.QDialogButtonBox(QtGui.QDialogButtonBox.Ok|QtGui.QDialogButtonBox.Cancel)
-        self.buttonBox.button(self.buttonBox.Ok).setEnabled(False)
-        self.pluginsModel.dataChanged.connect(lambda *args: self.buttonBox.button(self.buttonBox.Ok).setEnabled(True))
-        self.buttonBox.button(self.buttonBox.Ok).clicked.connect(self.setPlugins)
+        self.okBtn = self.buttonBox.button(self.buttonBox.Ok)
+        self.okBtn.setEnabled(False)
+        self.pluginsTable.cellChanged.connect(self.dataChanged)
+#        self.pluginsModel.dataChanged.connect(lambda *args: self.buttonBox.button(self.buttonBox.Ok).setEnabled(True))
+        self.okBtn.clicked.connect(self.setPlugins)
         self.buttonBox.button(self.buttonBox.Cancel).clicked.connect(self.reject)
         layout.addWidget(self.buttonBox)
+
+    def dataChanged(self, row, column):
+        self.okBtn.setEnabled(True)
+        selectableItem = self.pluginsTable.item(row, 0)
+        plugin = self.pluginsTable.item(row, 1).data(PluginRole).toPyObject()
+        enabled = selectableItem.data(QtCore.Qt.CheckStateRole).toBool()
+        editableItem = self.pluginsTable.cellWidget(row, 2)
+        pluginData = KdeConnectPlugins[unicode(plugin)]
+        if editableItem and enabled and pluginData.editable and pluginData.enabled:
+            editableItem.setEnabled(True)
+        elif editableItem:
+            editableItem.setEnabled(False)
+
+    def showPluginDialog(self, plugin):
+        config = QtCore.QFileInfo(self.devIface.pluginsConfigFile()).absolutePath() + '/{}/config'.format(plugin)
+        res = self.pluginDialogs[plugin](self, config).exec_()
+        if res:
+            self.devIface.reloadPlugins()
+            self.okBtn.setEnabled(True)
 
     def setPlugins(self):
         self.settings.beginGroup('plugins')
         for row in xrange(self.pluginsModel.rowCount()):
-            editableItem = self.pluginsModel.item(row, 1)
-            if not editableItem.isEnabled():
+            selectableItem = self.pluginsModel.item(row, 1)
+            if not selectableItem.isEnabled():
                 continue
             pluginItem = self.pluginsModel.item(row, 0)
             pluginNameFull = '{}Enabled'.format(pluginItem.data(PluginRole).toString())
-            pluginState = editableItem.data(QtCore.Qt.CheckStateRole).toBool()
+            pluginState = selectableItem.data(QtCore.Qt.CheckStateRole).toBool()
             if pluginState != self.settings.value(pluginNameFull).toBool():
 #                print pluginItem.text(), pluginItem.data(PluginRole).toString(), pluginState, self.settings.value(pluginNameFull).toBool()
                 self.settings.setValue(pluginNameFull, pluginState)
@@ -1236,9 +1484,9 @@ class DeviceDialog(QtGui.QDialog):
                 ))
 
         self.buttonBox = QtGui.QDialogButtonBox(QtGui.QDialogButtonBox.Ok|QtGui.QDialogButtonBox.Cancel)
-        self.OkBtn = self.buttonBox.button(self.buttonBox.Ok)
-        self.OkBtn.setEnabled(False)
-        self.OkBtn.clicked.connect(self.accept)
+        self.okBtn = self.buttonBox.button(self.buttonBox.Ok)
+        self.okBtn.setEnabled(False)
+        self.okBtn.clicked.connect(self.accept)
         self.buttonBox.button(self.buttonBox.Cancel).clicked.connect(self.reject)
         self.pairBtn = QtGui.QPushButton('Pair')
         self.pairBtn.setEnabled(False)
@@ -1283,7 +1531,7 @@ class DeviceDialog(QtGui.QDialog):
                 setBold(nameItem)
                 self.deviceTable.setCurrentIndex(self.currentDeviceIndex)
                 if paired:
-                    self.OkBtn.setEnabled(True)
+                    self.okBtn.setEnabled(True)
                 else:
                     self.pairBtn.setEnabled(True)
 
@@ -1323,7 +1571,7 @@ class DeviceDialog(QtGui.QDialog):
         if index.column() == 2:
             paired = index.data(QtCore.Qt.CheckStateRole).toBool()
             if index.row() == self.deviceTable.currentIndex().row():
-                self.OkBtn.setEnabled(paired)
+                self.okBtn.setEnabled(paired)
                 self.pairBtn.setEnabled(not paired)
 
     def showEvent(self, event=None):
@@ -1381,13 +1629,13 @@ class DeviceDialog(QtGui.QDialog):
                 nameItem.setEnabled(True)
                 pairedItem.setEnabled(True if state else False)
                 self.pairBtn.setEnabled(False)
-                self.OkBtn.setEnabled(True)
+                self.okBtn.setEnabled(True)
             else:
                 devItem.setEnabled(state)
                 nameItem.setEnabled(state)
                 pairedItem.setEnabled(state)
                 self.pairBtn.setEnabled(True if state else False)
-                self.OkBtn.setEnabled(False)
+                self.okBtn.setEnabled(False)
 
     def checkPairing(self, index):
         if not index.isValid():
@@ -1395,15 +1643,15 @@ class DeviceDialog(QtGui.QDialog):
             return
         if not self.deviceModel.itemFromIndex(index).isEnabled():
             self.pairBtn.setEnabled(False)
-            self.OkBtn.setEnabled(False)
+            self.okBtn.setEnabled(False)
             return
         paired = index.sibling(index.row(), 2).data(QtCore.Qt.CheckStateRole).toBool()
         if paired:
             self.pairBtn.setEnabled(False)
-            self.OkBtn.setEnabled(True)
+            self.okBtn.setEnabled(True)
         else:
             self.pairBtn.setEnabled(True)
-            self.OkBtn.setEnabled(False)
+            self.okBtn.setEnabled(False)
 
 
 class MissingRequiredPluginDialog(QtGui.QDialog):

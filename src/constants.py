@@ -21,8 +21,8 @@ stateIcons = _iconOff, _iconOn
 urlRegex = re.compile(r'\s((?:http(?:s)?:\/\/|ftp:\/\/)?[\d\w\@]+\.(?:[\w]{2,5})(?:(?:[\/]*(?![\,\.\:\;]\s)[\S])*)*)+')
 
 NotificationData = namedtuple('NotificationData', 'time app ticker id')
-PluginsData = namedtuple('PluginsData', 'text required')
-PluginsData.__new__.__defaults__ = (False, )
+PluginsData = namedtuple('PluginsData', 'text required editable enabled')
+PluginsData.__new__.__defaults__ = (False, False, True)
 StatusData = namedtuple('StatusData', 'time reachable battery charging')
 SettingsWidgetData = namedtuple('SettingsWidgetData', 'type default children')
 SettingsWidgetData.__new__.__defaults__ = (True, )
@@ -46,9 +46,9 @@ ID = '334e5229e64dad3c'
 CHECKBOX, SPINBOX, RADIO, LINEEDIT, GROUP = xrange(5)
 
 KdeConnectPlugins = {
-    'kdeconnect_pausemusic': PluginsData('Pause media on phone call'), 
+    'kdeconnect_pausemusic': PluginsData('Pause media on phone call', editable=True), 
     'kdeconnect_findmyphone': PluginsData('Find my phone'), 
-    'kdeconnect_share': PluginsData('Share files, links and text'), 
+    'kdeconnect_share': PluginsData('Share files, links and text', editable=True), 
     'kdeconnect_mpriscontrol': PluginsData('Media player control'), 
     'kdeconnect_ping': PluginsData('Ping the device'), 
     'kdeconnect_telephony': PluginsData('Phone call and messages'), 
@@ -56,18 +56,18 @@ KdeConnectPlugins = {
     'kdeconnect_mousepad': PluginsData('Trackpad-like and keyboard control'), 
     'kdeconnect_sftp': PluginsData('File system browse'), 
     'kdeconnect_clipboard': PluginsData('Share clipboard content'), 
-    'kdeconnect_sendnotifications': PluginsData('Show desktop notifications on the device'), 
+    'kdeconnect_sendnotifications': PluginsData('Show desktop notifications on the device', editable=True, enabled=False), 
     'kdeconnect_screensaver_inhibit': PluginsData('Disable screensaver'), 
-    'kdeconnect_runcommand': PluginsData('Run commands'), 
+    'kdeconnect_runcommand': PluginsData('Run commands', editable=True), 
     'kdeconnect_battery': PluginsData('Battery status', True), 
     }
 
 KdeConnectRequiredPlugins = set(p for p, d in KdeConnectPlugins.items() if d.required)
 
 KdeConnectPluginsDescriptions = {
-    'kdeconnect_pausemusic': 'Pause media player whenever a phone call starts (requires SystemSettings configuration)', 
+    'kdeconnect_pausemusic': 'Pause media player whenever a phone call starts', 
     'kdeconnect_findmyphone': 'Make the device "ring", in case you lost it and cannot find it (not required, but suggested)', 
-    'kdeconnect_share': 'Share files, links and text with the device (requires SystemSettings configuration)', 
+    'kdeconnect_share': 'Share files, links and text with the device', 
     'kdeconnect_mpriscontrol': 'Control the media player', 
     'kdeconnect_ping': '"Ping" the device, useful to check if it is actually connected and paired', 
     'kdeconnect_telephony': 'Receive notifications on phone calls and SMS messages', 
