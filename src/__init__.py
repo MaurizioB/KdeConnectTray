@@ -455,7 +455,10 @@ class KdeConnect(QtGui.QSystemTrayIcon):
         return
 
     def setCurrentIcon(self, state):
-        if self.settings.value('lowBatteryIconBlink', settingsWidgets['lowBatteryIconBlink'].default).toBool():
+        if self.phone.charging:
+            self.iconBlinkTimer.stop()
+            state= True
+        elif self.settings.value('lowBatteryIconBlink', settingsWidgets['lowBatteryIconBlink'].default).toBool():
             if self.phone.battery > self.settings.value('lowBatteryIconBlinkValue', settingsWidgets['lowBatteryIconBlinkValue'].default).toPyObject():
                 self.iconBlinkTimer.stop()
                 state = True
