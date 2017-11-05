@@ -18,7 +18,7 @@ _iconOn = 'file://' + os.path.join(os.path.dirname(__main__.__file__), 'icons', 
 _iconOff = 'file://' + os.path.join(os.path.dirname(__main__.__file__), 'icons', 'kdeconnect-tray-off.svg')
 stateIcons = _iconOff, _iconOn
 
-urlRegex = re.compile(r'((?:http(?:s)?:\/\/|ftp:\/\/)?[\d\w\@]+\.(?:[\w]{2,5})(?:(?:[\/]*(?![\,\.\:\;]\s)[\S])*)*)+')
+urlRegex = re.compile(r'\s((?:http(?:s)?:\/\/|ftp:\/\/)?[\d\w\@]+\.(?:[\w]{2,5})(?:(?:[\/]*(?![\,\.\:\;]\s)[\S])*)*)+')
 
 NotificationData = namedtuple('NotificationData', 'time app ticker id')
 PluginsData = namedtuple('PluginsData', 'text required')

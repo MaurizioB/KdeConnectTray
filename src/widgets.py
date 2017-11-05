@@ -61,7 +61,7 @@ class NotificationLabel(QtGui.QTextEdit):
         self.setText(u'{icon}<b>{app}</b><br/>{ticker}'.format(
                 icon=self.getAppIcon(), 
                 app=self.app, 
-                ticker=re.sub(urlRegex, lambda m: u''.join(u'<a href="{t}">{t}</a>'.format(t=t) for t in m.groups()), self.notification.ticker), 
+                ticker=re.sub(urlRegex, lambda m: u''.join(u' <a href="{t}">{t}</a>'.format(t=t) for t in m.groups()), self.notification.ticker), 
                 ))
 
 #    Method disabled until I find a way to reload the image resource
