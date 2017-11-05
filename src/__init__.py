@@ -42,7 +42,6 @@ class KdeConnect(QtGui.QSystemTrayIcon):
         self.settingsDialog = SettingsDialog(self)
         self.missingRequiredPluginDialog = MissingRequiredPluginDialog(self)
         self.loadData()
-        self.createMenu()
         self.dbus = dbus.SessionBus()
         self.fd_proxy = self.dbus.get_object('org.freedesktop.DBus', '/org/freedesktop/DBus')
         self.fd_iface = dbus.Interface(self.fd_proxy, dbus_interface='org.freedesktop.DBus')
@@ -75,7 +74,6 @@ class KdeConnect(QtGui.QSystemTrayIcon):
         self.iconBlinkTimer.setIntervals(250, 750)
         self.iconBlinkTimer.timeoutDual.connect(self.setCurrentIcon)
         self._currentIcon = self.iconOff
-
 
 #        self.fd_iface.connect_to_signal('NameOwnerChanged', self.owner_changed)
 
@@ -323,9 +321,22 @@ class KdeConnect(QtGui.QSystemTrayIcon):
         header = QtGui.QAction('KdeConnectTray', self.menu)
         header.setIcon(QtGui.QIcon('{}/kdeconnect-tray-off.svg'.format(iconsPath)))
         header.setSeparator(True)
+        self.menu.addAction(header)
+
+        utilsMenu = QtGui.QMenu('Utilities')
+        utilsMenu.setIcon(QtGui.QIcon.fromTheme('applications-utilities'))
+        self.menu.addMenu(utilsMenu)
         findMyPhoneAction = QtGui.QAction('Find my phone', self.menu)
         findMyPhoneAction.setIcon(QtGui.QIcon.fromTheme('edit-find'))
         findMyPhoneAction.triggered.connect(self.phone.findMyPhone)
+        findMyPhoneAction.setEnabled(True if self.phone.hasPlugin('kdeconnect_findmyphone') else False)
+        sendFileAction = QtGui.QAction('Send file...', self.menu)
+        sendFileAction.setIcon(QtGui.QIcon.fromTheme('mail-attachment'))
+        sendFileAction.triggered.connect(self.sendFile)
+        sendFileAction.setEnabled(True if self.phone.hasPlugin('kdeconnect_share') else False)
+        utilsMenu.setEnabled(True if self.phone.reachable and (findMyPhoneAction.isEnabled() or sendFileAction.isEnabled()) else False)
+        utilsMenu.addActions([findMyPhoneAction, sendFileAction])
+
         sep = QtGui.QAction(self.menu)
         sep.setSeparator(True)
         historyAction = QtGui.QAction('History...', self.menu)
@@ -344,17 +355,31 @@ class KdeConnect(QtGui.QSystemTrayIcon):
         quitAction = QtGui.QAction('Quit', self.menu)
         quitAction.setIcon(QtGui.QIcon.fromTheme('application-exit'))
         quitAction.triggered.connect(self.quit)
-        self.menu.addActions([header, findMyPhoneAction, sep, historyAction, settingsAction, aboutSep, aboutAction, quitSep, quitAction])
+        self.menu.addActions([sep, historyAction, settingsAction, aboutSep, aboutAction, quitSep, quitAction])
         self.setContextMenu(self.menu)
         self.phone.pluginsChanged.connect(
-            lambda: findMyPhoneAction.setEnabled(
-                True if self.phone.reachable and 'kdeconnect_findmyphone' in self.phone.loadedPlugins else False))
-        #this connection is delayed since it might take a while for plugins to load once the device has become reachable
+            lambda: (findMyPhoneAction.setEnabled(
+                True if self.phone.reachable and self.phone.hasPlugin('kdeconnect_findmyphone') else False), 
+                    sendFileAction.setEnabled(
+                True if self.phone.reachable and self.phone.hasPlugin('kdeconnect_share') else False), 
+                    utilsMenu.setEnabled(True if self.phone.reachable and (findMyPhoneAction.isEnabled() or sendFileAction.isEnabled()) else False)
+                ))
+
         self.phone.reachableChanged.connect(
-            lambda reachable: findMyPhoneAction.setEnabled(False) if not reachable else \
-                QtCore.QTimer.singleShot(2000, 
-                lambda: findMyPhoneAction.setEnabled(
-                    True if reachable and 'kdeconnect_findmyphone' in self.phone.loadedPlugins else False)))
+            lambda reachable: utilsMenu.setEnabled(False) if not reachable else (
+                findMyPhoneAction.setEnabled(True if self.phone.hasPlugin('kdeconnect_findmyphone') else False), 
+                sendFileAction.setEnabled(True if self.phone.hasPlugin('kdeconnect_share') else False), 
+                utilsMenu.setEnabled(True if self.phone.reachable and (findMyPhoneAction.isEnabled() or sendFileAction.isEnabled()) else False)
+                ))
+
+    def sendFile(self):
+        fileName = QtGui.QFileDialog.getOpenFileName(None, 
+            u'Select the file to send to the device', 
+            os.path.expanduser('~')
+            )
+        if not fileName:
+            return
+        self.phone.share(fileName)
 
     def about(self):
         def keyPressEvent(event):
@@ -400,11 +425,8 @@ class KdeConnect(QtGui.QSystemTrayIcon):
 
     def activate(self):
         try:
-#            self.phoneProxy = self.dbus.get_object('org.kde.kdeconnect', '/modules/kdeconnect/devices/{}'.format(self.phone.id))
             self.phone.setProxy(self.dbus)
-#            self.phone.setReachable(self.phoneProps.Get('org.kde.kdeconnect.device', 'isReachable'))
-#            self.phoneCmd = dbus.Interface(self.phoneProxy, dbus_interface='org.kde.kdeconnect.device')
-#            print self.phoneProps.GetAll('org.kde.kdeconnect.device')
+            self.createMenu()
             return True
         except Exception as e:
             print 'Exception: {}'.format(e)

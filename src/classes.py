@@ -230,7 +230,6 @@ class Device(QtCore.QObject):
         self.dbus = bus
         self.proxy = self.dbus.get_object('org.kde.kdeconnect', '/modules/kdeconnect/devices/{}'.format(self.id))
         self.propsIface = dbus.Interface(self.proxy, dbus_interface='org.freedesktop.DBus.Properties')
-        self.reachable = self.propsIface.Get('org.kde.kdeconnect.device', 'isReachable')
 
         self.devIface = dbus.Interface(self.proxy, dbus_interface='org.kde.kdeconnect.device')
         self.devIface.connect_to_signal('reachableStatusChanged', lambda: self.setReachable(self.propsIface.Get('org.kde.kdeconnect.device', 'isReachable')))
@@ -249,16 +248,32 @@ class Device(QtCore.QObject):
             self.dbus.get_object('org.kde.kdeconnect', '/modules/kdeconnect/devices/{}/findmyphone'.format(self.id)), 
             dbus_interface='org.kde.kdeconnect.device.findmyphone')
 
+        self.shareIface = dbus.Interface(
+            self.dbus.get_object('org.kde.kdeconnect', '/modules/kdeconnect/devices/{}/share'.format(self.id)), 
+            dbus_interface='org.kde.kdeconnect.device.share')
+
+        self.reachable = self.propsIface.Get('org.kde.kdeconnect.device', 'isReachable')
         self.name = self.propsIface.Get('org.kde.kdeconnect.device', 'name')
         self.battery = self.batteryIface.charge()
         self.charging = self.batteryIface.isCharging()
         self.createNotifications()
 
+    def hasPlugin(self, plugin):
+        if self.devIface is None:
+            print 'staocazzoi'
+            raise
+        return self.devIface.hasPlugin(plugin)
 
     def hasMissingRequiredPlugins(self):
         self.loadedPlugins = map(unicode, self.devIface.loadedPlugins())
         requiredFound = KdeConnectRequiredPlugins & set(self.loadedPlugins)
         return True if requiredFound != KdeConnectRequiredPlugins else False
+
+    def share(self, url):
+        url = unicode(url)
+        if not url.startswith('file://'):
+            url = 'file://' + url
+        self.shareIface.shareUrl(url)
 
     def findMyPhone(self):
         self.findMyPhoneIface.ring()
