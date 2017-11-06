@@ -47,6 +47,28 @@ class BasePluginDialog(QtGui.QDialog):
 #        pass
 
 
+class CmdItemDelegate(QtGui.QStyledItemDelegate):
+    clicked = QtCore.pyqtSignal(object)
+
+    def paint(self, painter, style, index):
+        QtGui.QStyledItemDelegate.paint(self, painter, style, index)
+        rect = style.rect
+        btn = QtGui.QStyleOptionButton()
+        btn.rect = QtCore.QRect(rect.left() + rect.width() - 30, rect.top(), 30, 30)
+        btn.icon = QtGui.QIcon.fromTheme('document-open')
+        btn.state = QtGui.QStyle.State_Enabled
+        QtGui.QApplication.style().drawControl(QtGui.QStyle.CE_PushButton, btn, painter)
+
+    def editorEvent(self, event, model, style, index):
+        if event.type() == QtCore.QEvent.MouseButtonPress:
+            rect = style.rect
+            btnRect = QtCore.QRect(rect.left() + rect.width() - 30, rect.top(), 30, 30)
+            if event.pos() in btnRect:
+                self.clicked.emit(index)
+                return True
+        return QtGui.QStyledItemDelegate.editorEvent(self, event, model, style, index)
+
+
 class PluginRunCommands(BasePluginDialog):
     def __init__(self, parent, config):
         BasePluginDialog.__init__(self, parent, config)
@@ -56,46 +78,115 @@ class PluginRunCommands(BasePluginDialog):
         layout = self.contentLayout
         self.cmdModel = QtGui.QStandardItemModel()
         self.cmdTable = QtGui.QTableView()
+        cmdItemDelegate = CmdItemDelegate()
+        cmdItemDelegate.clicked.connect(self.browse)
+        self.cmdTable.setItemDelegateForColumn(1, cmdItemDelegate)
+        self.cmdTable.setMouseTracking(True)
         self.cmdTable.setModel(self.cmdModel)
-        layout.addWidget(self.cmdTable)
+        layout.addWidget(self.cmdTable, 0, 0, 3, 1)
         self.cmdTable.verticalHeader().setVisible(False)
         self.resetModel()
-        count = 0
+#        count = 0
         for id, cmdDict in json.loads(unicode(self.settings.value('commands').toString())).items():
             name = cmdDict['name']
             cmd = cmdDict['command']
             nameItem = QtGui.QStandardItem(name)
             nameItem.setData(id.strip('{}'))
             cmdItem = QtGui.QStandardItem(cmd)
+#            browseItem = QtGui.QStandardItem()
             self.cmdModel.appendRow([nameItem, cmdItem])
-            count += 1
+
+#            browseBtn = QtGui.QPushButton(self)
+#            browseBtn.setIcon(QtGui.QIcon.fromTheme('document-open'))
+#            browseBtn.clicked.connect(lambda state, browseItem=browseItem: self.browse(browseItem))
+#            self.cmdTable.setIndexWidget(self.cmdModel.index(self.cmdModel.rowCount() - 1, 2), browseBtn)
+#            count += 1
         self.addEmptyCmdItem()
         self.cmdTable.resizeColumnToContents(0)
+        self.cmdTable.resizeColumnToContents(2)
         self.cmdTable.horizontalHeader().setResizeMode(1, QtGui.QHeaderView.Stretch)
+        self.cmdTable.horizontalHeader().setResizeMode(2, QtGui.QHeaderView.Fixed)
+
+        self.addBtn = QtGui.QPushButton()
+        self.addBtn.setIcon(QtGui.QIcon.fromTheme('list-add'))
+        self.addBtn.setToolTip('Add new command')
+        layout.addWidget(self.addBtn, 0, 1)
+        self.delBtn = QtGui.QPushButton()
+        self.delBtn.setIcon(QtGui.QIcon.fromTheme('list-remove'))
+        self.delBtn.setToolTip('Delete selected command')
+        self.delBtn.setEnabled(False)
+        self.delBtn.clicked.connect(self.deleteCmd)
+        layout.addWidget(self.delBtn, 1, 1)
+
         self.cmdModel.dataChanged.connect(self.updateCmds)
+        self.cmdTable.selectionModel().currentChanged.connect(self.selectionChanged)
         self.restoreBtn.clicked.connect(self.resetModel)
 
+    def browse(self, index):
+        browseDialog = QtGui.QFileDialog(self, 'Select the command to execute', os.path.expanduser(u'~/{}'.format(index.data().toPyObject())))
+        browseDialog.setFilter(QtCore.QDir.Executable)
+        res = browseDialog.exec_()
+        if not res:
+            return
+        self.cmdModel.itemFromIndex(index).setText(browseDialog.selectedFiles()[0])
+
+    def deleteCmd(self):
+        if not self.cmdTable.currentIndex().isValid():
+            return
+        column = self.cmdTable.currentIndex().column()
+        row = self.cmdTable.currentIndex().row()
+        self.cmdModel.takeRow(row)
+        nameItem = self.cmdModel.item(row, 0)
+        cmdItem = self.cmdModel.item(row, 1)
+        if row == 0:
+            index = self.cmdModel.index(0, column)
+        elif nameItem.text() or cmdItem.text():
+            index = self.cmdModel.index(row, column)
+        else:
+            index = self.cmdModel.index(row - 1, column)
+        self.cmdTable.setCurrentIndex(index)
+
+    def selectionChanged(self, index, previous):
+        if index.data().toPyObject():
+            self.delBtn.setEnabled(True)
+            return
+        sibling = index.sibling(index.row(), 0 if index.column() else 1)
+        self.delBtn.setEnabled(True if sibling.data().toPyObject() else False)
+
     def updateCmds(self, index, _):
+        self.cmdModel.dataChanged.disconnect()
+        blankRows = []
         for row in xrange(self.cmdModel.rowCount()):
             nameItem = self.cmdModel.item(row, 0)
             cmdItem = self.cmdModel.item(row, 1)
             if not nameItem.text() and not cmdItem.text():
+                if row <= self.cmdModel.rowCount() - 2:
+                    blankRows.append(row)
                 continue
             if not nameItem.text() or not cmdItem.text():
                 self.okBtn.setEnabled(False)
                 break
         else:
             self.okBtn.setEnabled(True)
-        if self.cmdModel.item(self.cmdModel.rowCount() - 1, 0).text() and self.cmdModel.item(self.cmdModel.rowCount() - 1, 0).text():
+        [self.cmdModel.takeRow(row) for row in reversed(blankRows)]
+        if self.cmdModel.item(self.cmdModel.rowCount() - 1, 0).text() and self.cmdModel.item(self.cmdModel.rowCount() - 1, 1).text():
             prevRow = self.cmdModel.rowCount() - 1
             if self.cmdModel.item(prevRow, 0).text() and self.cmdModel.item(prevRow, 1).text():
                 self.addEmptyCmdItem()
+        column = index.column()
+        if column == 0:
+            nextIndex = self.cmdModel.index(index.row(), 1)
+            self.cmdTable.setCurrentIndex(nextIndex)
+        elif index.row() < self.cmdModel.rowCount() - 1:
+            nextIndex = self.cmdModel.index(index.row() + 1, 0)
+            self.cmdTable.setCurrentIndex(nextIndex)
+        self.cmdModel.dataChanged.connect(self.updateCmds)
 
     def resetModel(self):
         t = gettext.translation('kdeconnect-plugins', '/usr/share/locale', fallback=True)
         _ = t.ugettext
         self.cmdModel.clear()
-        self.cmdModel.setHorizontalHeaderLabels([_('Name'), _('Command')])
+        self.cmdModel.setHorizontalHeaderLabels([_('Name'), _('Command'), ''])
 
     def addEmptyCmdItem(self):
         emptyNameItem = QtGui.QStandardItem()

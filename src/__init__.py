@@ -16,6 +16,7 @@ from classes import *
 from widgets import *
 
 
+
 class KdeConnect(QtGui.QSystemTrayIcon):
     def __init__(self, parent, deviceID):
         self.iconOff = QtGui.QIcon('{}/kdeconnect-tray-off.svg'.format(iconsPath))
