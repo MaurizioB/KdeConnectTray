@@ -1042,11 +1042,11 @@ class PluginsDialog(QtGui.QDialog):
 
     def setPlugins(self):
         self.settings.beginGroup('plugins')
-        for row in xrange(self.pluginsModel.rowCount()):
-            selectableItem = self.pluginsModel.item(row, 1)
-            if not selectableItem.isEnabled():
+        for row in xrange(self.pluginsTable.rowCount()):
+            selectableItem = self.pluginsTable.item(row, 0)
+            if not selectableItem.flags() & QtCore.Qt.ItemIsEnabled:
                 continue
-            pluginItem = self.pluginsModel.item(row, 0)
+            pluginItem = self.pluginsTable.item(row, 1)
             pluginNameFull = '{}Enabled'.format(pluginItem.data(PluginRole).toString())
             pluginState = selectableItem.data(QtCore.Qt.CheckStateRole).toBool()
             if pluginState != self.settings.value(pluginNameFull).toBool():
