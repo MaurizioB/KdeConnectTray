@@ -9,11 +9,12 @@ from glob import glob
 from PyQt4 import QtGui, QtCore
 from dbus.mainloop.qt import DBusQtMainLoop
 
-from constants import *
-from utils import *
-from dialogs import *
-from classes import *
-from widgets import *
+from src.info import __version__
+from src.constants import *
+from src.utils import *
+from src.dialogs import *
+from src.classes import *
+from src.widgets import *
 
 
 
@@ -76,9 +77,6 @@ class KdeConnect(QtGui.QSystemTrayIcon):
         self._currentIcon = self.iconOff
 
 #        self.fd_iface.connect_to_signal('NameOwnerChanged', self.owner_changed)
-
-    def timeoutShow(self, *args):
-        print args
 
     def testBattery(self, battery):
         print 'battery changed:', battery
@@ -390,7 +388,7 @@ class KdeConnect(QtGui.QSystemTrayIcon):
             'About KdeConnectTray', 
             '<h1>KdeConnectTray</h1>' \
             'version {version}<br/>' \
-            'by Maurizio Berti'.format(version=VERSION)
+            'by Maurizio Berti'.format(version=__version__)
             )
         msgBox.keyPressEvent = keyPressEvent
         btn = QtGui.QPushButton('About Qt...')
@@ -408,8 +406,7 @@ class KdeConnect(QtGui.QSystemTrayIcon):
 
     def showSettings(self):
         showCenter(self.settingsDialog)
-        res = self.settingsDialog.exec_()
-        print res
+        self.settingsDialog.exec_()
 
     def eventFilter(self, source, event):
         if event.type() == QtCore.QEvent.ToolTip:

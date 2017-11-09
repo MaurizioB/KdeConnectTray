@@ -7,11 +7,6 @@ import re
 from collections import namedtuple
 from PyQt4 import QtCore
 
-MAJ_VERSION = 0
-MIN_VERSION = 9
-REV_VERSION = 0
-VERSION = '{}.{}.{}'.format(MAJ_VERSION, MIN_VERSION, REV_VERSION)
-
 HIGH, LOW = 0, 1
 UNREACHABLE, REACHABLE = 0, 1
 _iconOn = 'file://' + os.path.join(os.path.dirname(__main__.__file__), 'icons', 'kdeconnect-tray-on.svg')

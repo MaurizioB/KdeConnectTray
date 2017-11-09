@@ -27,16 +27,31 @@ Requirements
 .. _Google Play: https://play.google.com/store/apps/details?id=org.kde.kdeconnect_tp
 .. _F-Droid: https://f-droid.org/repository/browse/?fdid=org.kde.kdeconnect_tp
 
+Installation
+------------
+
+Installation is optional (the script can be run from the main directory), but
+raccomanded.
+
+Standard system installation:
+
+``sudo ./setup.py install``
+
+Single user installation:
+
+``./setup.py install --user``
+
+If you want to keep track of installed files, append ``--record files.txt`` to 
+the command line. If you want to delete it afterwards, just run:
+
+``cat files.txt | xargs -d '\n' rm -rf``
+
 Usage
 -----
 
-Figure it out ;-)
-
-Ok, let's get serious. I promise, I will add a small tutorial about this.
-Keep in mind that this is an early release, and still needs a lot of work and 
-fixes (and refactoring, I know).
-
-For now it just works (or should) by running the ``KdeConnectTray`` script.
+If you didn't follow the installation procedure, run ``./KdeConnectTray`` from
+the main directory where you cloned the project.
+Otherwise, just launch ``KdeConnectTray`` as any other installed program.
 
 Once started it will try to find available devices in the current network with 
 the KdeConnect app installed. Select the device and press "Ok". If the device has

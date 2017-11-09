@@ -2,10 +2,10 @@
 # *-* coding: utf-8 *-*
 
 import os
-import __main__
 from PyQt4 import QtCore, QtGui, uic
 
-basePath = os.path.dirname(os.path.abspath(__main__.__file__))
+#basePath = os.path.dirname(os.path.abspath(__file__))
+basePath = os.path.abspath(os.path.join(__file__, os.pardir, os.pardir))
 iconsPath = os.path.join(basePath, 'icons')
 
 def loadUi(uiFileName, widget):
