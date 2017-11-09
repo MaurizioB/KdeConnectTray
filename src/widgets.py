@@ -236,7 +236,6 @@ class ToolTipWidget(QtGui.QWidget):
             else:
                 self.notificationLayout.addWidget(label, self.notificationLayout.rowCount(), 0, 1, 2)
             self.notifications[n] = label, btn
-#            print self.sizeHint()
         self.adjustSize()
         for n in self.notifications:
             if not n in self.phone.notifications.values():

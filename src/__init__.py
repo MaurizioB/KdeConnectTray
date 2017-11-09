@@ -69,7 +69,6 @@ class KdeConnect(QtGui.QSystemTrayIcon):
                 self.defaultIcons[_iconName[:-4]] = QtGui.QIcon(_iconPath)
         self.notifierThread.start()
         self.notifier.notify(body='Started!')
-#        QtCore.QTimer.singleShot(1000, self.missingRequiredPluginDialog.updatePlugins)
         QtCore.QTimer.singleShot(1000, self.missingRequiredPluginDialog.updatePlugins)
         self.iconBlinkTimer = DualTimer(self)
         self.iconBlinkTimer.setIntervals(250, 750)

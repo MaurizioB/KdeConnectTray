@@ -68,7 +68,7 @@ class DBusNotificationsManager(QtCore.QObject):
 
     def notify(self, title='KdeConnectTray', body='', icon=True, timeout=5000, priority=LOW):
         if not QtCore.QSettings().value('desktopNotifications', True).toBool():
-            print 'bobbou'
+#            print 'bobbou'
             return
         if isinstance(icon, bool):
             icon = stateIcons[icon]
@@ -224,7 +224,6 @@ class Device(QtCore.QObject):
         self.batteryIface = None
         self.notificationIface = None
         self._notifications = NotificationDict(self)
-        self.loadedPlugins = []
 
     def setProxy(self, bus):
         self.dbus = bus
@@ -260,14 +259,15 @@ class Device(QtCore.QObject):
 
     def hasPlugin(self, plugin):
         if self.devIface is None:
-            print 'staocazzoi'
+#            print 'staocazzoi'
             raise
         return self.devIface.hasPlugin(plugin)
 
     def hasMissingRequiredPlugins(self):
-        self.loadedPlugins = map(unicode, self.devIface.loadedPlugins())
-        requiredFound = KdeConnectRequiredPlugins & set(self.loadedPlugins)
-        return True if requiredFound != KdeConnectRequiredPlugins else False
+        for plugin in KdeConnectRequiredPlugins:
+            if not self.hasPlugin(plugin):
+                return True
+        return False
 
     def share(self, url):
         url = unicode(url)

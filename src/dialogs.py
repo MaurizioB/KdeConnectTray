@@ -1766,11 +1766,18 @@ class MissingRequiredPluginDialog(QtGui.QDialog):
         self.pluginsTable.setEditTriggers(self.pluginsTable.NoEditTriggers)
 
         self.buttonBox = QtGui.QDialogButtonBox(QtGui.QDialogButtonBox.Cancel)
+        layout.addWidget(self.buttonBox)
+        self.buttonBox.button(self.buttonBox.Cancel).clicked.connect(self.reject)
+
         self.restoreBtn = QtGui.QPushButton('Restore')
         self.restoreBtn.setIcon(QtGui.QIcon.fromTheme('edit-undo'))
-        self.buttonBox.addButton(self.restoreBtn, self.buttonBox.AcceptRole)
-        layout.addWidget(self.buttonBox)
         self.restoreBtn.clicked.connect(self.restorePlugins)
+        self.buttonBox.addButton(self.restoreBtn, self.buttonBox.AcceptRole)
+
+        self.reloadBtn = QtGui.QPushButton('Refresh list')
+        self.reloadBtn.setIcon(QtGui.QIcon.fromTheme('view-refresh'))
+        self.reloadBtn.clicked.connect(lambda: self.updatePlugins(None))
+        self.buttonBox.addButton(self.reloadBtn, self.buttonBox.ActionRole)
 
     def restorePlugins(self):
         self.settings = QtCore.QSettings(self.phone.devIface.pluginsConfigFile(), QtCore.QSettings.NativeFormat)
@@ -1787,19 +1794,19 @@ class MissingRequiredPluginDialog(QtGui.QDialog):
         else:
             QtGui.QDialog.keyPressEvent(self, event)
 
-    def closeEvent(self, event):
-        event.ignore()
-
     def updatePlugins(self, state=None):
         self.phone = self.main.phone
         if state is None:
             state = self.phone.hasMissingRequiredPlugins()
-            print state
         if not state:
             self.hide()
             return
         _start = self.pluginsModel.index(0, 0)
-        missingPlugins = KdeConnectRequiredPlugins & set(map(unicode, self.phone.devIface.loadedPlugins())) ^ KdeConnectRequiredPlugins
+#        missingPlugins = KdeConnectRequiredPlugins & set(map(unicode, self.phone.devIface.loadedPlugins())) ^ KdeConnectRequiredPlugins
+        missingPlugins = [plugin for plugin in KdeConnectRequiredPlugins if not self.phone.hasPlugin(plugin)]
+        if not missingPlugins:
+            self.hide()
+            return
         for missing in missingPlugins:
             matches = self.pluginsModel.match(_start, PluginRole, missing, -1, QtCore.Qt.MatchExactly|QtCore.Qt.MatchWrap)
             if not matches:
@@ -1817,13 +1824,13 @@ class MissingRequiredPluginDialog(QtGui.QDialog):
             self.pluginsTable.setMaximumHeight(self.pluginsTable.sizeHintForRow(0) * len(KdeConnectRequiredPlugins) + self.pluginsTable.frameWidth() * 2)
             self.adjustSize()
 
-    def exec_(self):
-        self.pluginsModel.clear()
-        self.phone = self.main.phone
-        for missing in KdeConnectRequiredPlugins & set(map(unicode, self.phone.devIface.loadedPlugins())) ^ KdeConnectRequiredPlugins:
-            missingItem = QtGui.QStandardItem(KdeConnectPlugins[missing].text)
-            self.pluginsModel.appendRow(missingItem)
-        self.show()
-        self.pluginsTable.setMaximumHeight(self.pluginsTable.sizeHintForRow(0) * len(KdeConnectRequiredPlugins) + self.pluginsTable.frameWidth() * 2)
-        self.adjustSize()
+#    def exec_(self):
+#        self.pluginsModel.clear()
+#        self.phone = self.main.phone
+#        for missing in KdeConnectRequiredPlugins & set(map(unicode, self.phone.devIface.loadedPlugins())) ^ KdeConnectRequiredPlugins:
+#            missingItem = QtGui.QStandardItem(KdeConnectPlugins[missing].text)
+#            self.pluginsModel.appendRow(missingItem)
+#        self.show()
+#        self.pluginsTable.setMaximumHeight(self.pluginsTable.sizeHintForRow(0) * len(KdeConnectRequiredPlugins) + self.pluginsTable.frameWidth() * 2)
+#        self.adjustSize()
 
