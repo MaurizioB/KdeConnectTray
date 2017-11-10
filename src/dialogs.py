@@ -1798,7 +1798,7 @@ class MissingRequiredPluginDialog(QtGui.QDialog):
         self.phone = self.main.phone
         if state is None:
             state = self.phone.hasMissingRequiredPlugins()
-        if not state:
+        if not self.phone.reachable or not state:
             self.hide()
             return
         _start = self.pluginsModel.index(0, 0)
