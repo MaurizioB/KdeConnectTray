@@ -346,7 +346,7 @@ class KdeConnect(QtGui.QSystemTrayIcon):
         aboutSep = QtGui.QAction(self.menu)
         aboutSep.setSeparator(True)
         aboutAction = QtGui.QAction('About...', self.menu)
-        aboutAction.setIcon(QtGui.QIcon.fromTheme('dialog-information'))
+        aboutAction.setIcon(QtGui.QIcon.fromTheme('help-about'))
         aboutAction.triggered.connect(self.about)
         quitSep = QtGui.QAction(self.menu)
         quitSep.setSeparator(True)
