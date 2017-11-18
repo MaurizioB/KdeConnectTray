@@ -391,13 +391,15 @@ class CustomIcon(QtCore.QObject):
         qp.setPen(QtGui.QPen(QtGui.QColor(*batteryColor(self.phone.battery)), 2))
         qp.drawLine(3, size.height() - 2, 3, size.height() - 1 - (size.height() - 2) * self.phone.battery * .01)
         notiSize = size.height() / 2.5
-        if self.phone.notifications:
+        showUndismissable = QtCore.QSettings().value('showUndismissable').toBool()
+        notifications = [n for n in self.phone.notifications.values() if n.dismissable or (not n.dismissable and showUndismissable)]
+        if notifications:
             qp.setBrush(QtCore.Qt.white)
             qp.setPen(QtCore.Qt.darkGray)
             font = QtGui.QFont()
             font.setPointSizeF(notiSize - 2)
             qp.setFont(font)
-            notifLen = len(self.phone.notifications)
+            notifLen = len(notifications)
             if notifLen < 10:
                 notiRect = QtCore.QRectF(size.width() - 1, size.height() - 1, -notiSize, -notiSize)
                 qp.drawEllipse(notiRect)
@@ -405,7 +407,7 @@ class CustomIcon(QtCore.QObject):
                 notiRect = QtCore.QRectF(size.width() - 1, size.height() - 1, -QtGui.QFontMetrics(font).width('00') - 2, -notiSize)
                 qp.drawRect(notiRect)
             qp.setPen(QtCore.Qt.black)
-            qp.drawText(notiRect, QtCore.Qt.AlignCenter, str(len(self.phone.notifications)))
+            qp.drawText(notiRect, QtCore.Qt.AlignCenter, str(notifLen))
         if self.phone.charging:
             qp.setBrush(QtGui.QColor(50, 200, 255))
             qp.setPen(QtGui.QPen(QtCore.Qt.darkGray, .5))

@@ -206,11 +206,10 @@ class ToolTipWidget(QtGui.QWidget):
 #            charging=' (charging{})'.format(self.estimated) if self.phone.charging else self.estimated
             charging=charging
             ))
-        self.spacer.setVisible(True if self.phone.notifications else False)
+        showUndismissable = self.settings.value('showUndismissable').toBool()
         delete = set()
         dismissable = []
         normal = []
-        showUndismissable = self.settings.value('showUndismissable')
         for id in sorted(self.phone.notifications.keys()):
             n = self.phone.notifications[id]
             if not n.dismissable:
@@ -220,6 +219,9 @@ class ToolTipWidget(QtGui.QWidget):
                     dismissable.append(n)
             else:
                 normal.append(n)
+
+        self.spacer.setVisible(True if dismissable + normal else False)
+
         for n in dismissable + normal:
             if n in self.notifications:
                 continue
@@ -243,15 +245,19 @@ class ToolTipWidget(QtGui.QWidget):
         if not delete:
             return
         for n in delete:
-            label, btn = self.notifications.pop(n)
-            self.notificationLayout.removeWidget(label)
             try:
+                label, btn = self.notifications.pop(n)
+                self.notificationLayout.removeWidget(label)
+                label.deleteLater()
                 self.notificationLayout.removeWidget(btn)
+                btn.deleteLater()
             except:
                 pass
-            label.deleteLater()
-            btn.deleteLater()
-            n.deleteLater()
+            try:
+                #might have been already removed
+                n.deleteLater()
+            except:
+                pass
         self.dynResize()
 
     def dismissNotification(self, notification):
