@@ -19,6 +19,7 @@ Features
 Requirements
 ------------
 - Python 2.7
+- python-dbus >= 1.2.0
 - PyQt4 >= 4.11.1
 - KdeConnect >= 1.0.3
 - KdeConnect app installed on the device. You can find it on `Google Play`_ or
