@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>448</width>
-    <height>548</height>
+    <width>441</width>
+    <height>494</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -643,7 +643,7 @@
                <string>Limit to</string>
               </property>
               <property name="checked">
-               <bool>true</bool>
+               <bool>false</bool>
               </property>
               <attribute name="buttonGroup">
                <string notr="true">keepStatusModeGroup</string>
@@ -751,7 +751,7 @@
              <string>Keep everything (might use a lot of space!)</string>
             </property>
             <property name="checked">
-             <bool>false</bool>
+             <bool>true</bool>
             </property>
             <attribute name="buttonGroup">
              <string notr="true">keepStatusModeGroup</string>
@@ -883,8 +883,8 @@
    <slot>setEnabled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>91</x>
-     <y>352</y>
+     <x>93</x>
+     <y>342</y>
     </hint>
     <hint type="destinationlabel">
      <x>136</x>
@@ -899,12 +899,12 @@
    <slot>setEnabled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>84</x>
-     <y>388</y>
+     <x>93</x>
+     <y>378</y>
     </hint>
     <hint type="destinationlabel">
-     <x>138</x>
-     <y>389</y>
+     <x>186</x>
+     <y>383</y>
     </hint>
    </hints>
   </connection>
@@ -915,12 +915,12 @@
    <slot>setEnabled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>147</x>
-     <y>433</y>
+     <x>166</x>
+     <y>417</y>
     </hint>
     <hint type="destinationlabel">
      <x>374</x>
-     <y>437</y>
+     <y>422</y>
     </hint>
    </hints>
   </connection>
@@ -931,12 +931,12 @@
    <slot>setEnabled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>171</x>
-     <y>433</y>
+     <x>173</x>
+     <y>417</y>
     </hint>
     <hint type="destinationlabel">
      <x>422</x>
-     <y>438</y>
+     <y>423</y>
     </hint>
    </hints>
   </connection>
@@ -947,12 +947,12 @@
    <slot>setEnabled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>156</x>
-     <y>395</y>
+     <x>173</x>
+     <y>379</y>
     </hint>
     <hint type="destinationlabel">
      <x>374</x>
-     <y>399</y>
+     <y>384</y>
     </hint>
    </hints>
   </connection>
@@ -963,12 +963,12 @@
    <slot>setEnabled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>163</x>
-     <y>395</y>
+     <x>173</x>
+     <y>379</y>
     </hint>
     <hint type="destinationlabel">
      <x>422</x>
-     <y>400</y>
+     <y>385</y>
     </hint>
    </hints>
   </connection>
@@ -979,8 +979,8 @@
    <slot>setEnabled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>65</x>
-     <y>166</y>
+     <x>84</x>
+     <y>164</y>
     </hint>
     <hint type="destinationlabel">
      <x>216</x>
@@ -995,8 +995,8 @@
    <slot>setEnabled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>98</x>
-     <y>207</y>
+     <x>93</x>
+     <y>200</y>
     </hint>
     <hint type="destinationlabel">
      <x>223</x>
@@ -1011,12 +1011,12 @@
    <slot>setEnabled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>100</x>
-     <y>352</y>
+     <x>93</x>
+     <y>342</y>
     </hint>
     <hint type="destinationlabel">
      <x>229</x>
-     <y>355</y>
+     <y>347</y>
     </hint>
    </hints>
   </connection>
@@ -1031,8 +1031,8 @@
      <y>377</y>
     </hint>
     <hint type="destinationlabel">
-     <x>220</x>
-     <y>386</y>
+     <x>229</x>
+     <y>383</y>
     </hint>
    </hints>
   </connection>

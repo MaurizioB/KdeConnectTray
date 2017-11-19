@@ -1435,7 +1435,9 @@ class SettingsDialog(QtGui.QDialog):
                 w.blockSignals(True)
         for item, data in settingsWidgets.items():
             if data.type == GROUP:
-                getattr(self, '{}Group'.format(item)).button(int(self.settings.value(item, data.default).toPyObject())).setChecked(True)
+                radioBtn = getattr(self, '{}Group'.format(item)).button(int(self.settings.value(item, data.default).toPyObject()))
+                #the slot is delayed (0: as soon as main loop is available) to ensure that signals are actually sent
+                QtCore.QTimer.singleShot(0, lambda radioBtn=radioBtn: radioBtn.setChecked(True))
                 continue
             widget = getattr(self, '{name}{type}'.format(name=item, type=widgetNameSignals[data.type].label))
             value = self.settings.value(item, data.default).toPyObject()

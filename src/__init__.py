@@ -17,7 +17,6 @@ from src.classes import *
 from src.widgets import *
 
 
-
 class KdeConnect(QtGui.QSystemTrayIcon):
     def __init__(self, parent, deviceID):
         self.iconOff = QtGui.QIcon('{}/kdeconnect-tray-off.svg'.format(iconsPath))
@@ -139,6 +138,12 @@ class KdeConnect(QtGui.QSystemTrayIcon):
                 print 'error writing status data: {}'.format(e)
 
     def updateStatus(self, *args):
+        def write(statusHistory):
+            try:
+                with open(self.statusPath, 'wb') as statusfile:
+                    pickle.dump(statusHistory, statusfile)
+            except Exception as e:
+                print 'error writing status: {}'.format(e)
         if self.phone.battery <= 1:
             return
         now = QtCore.QDateTime.currentMSecsSinceEpoch() / 1000
@@ -160,11 +165,20 @@ class KdeConnect(QtGui.QSystemTrayIcon):
         self.getDataDir()
         if self.dataDir is None:
             return
-        try:
-            with open(self.statusPath, 'wb') as statusfile:
-                pickle.dump(self.statusHistory, statusfile)
-        except Exception as e:
-            print 'error writing status: {}'.format(e)
+        keepStatusMode = self.settings.value('keepStatusMode', settingsWidgets['keepStatusMode'].default).toInt()[0]
+        if keepStatusMode == ALL:
+            write(self.statusHistory)
+        elif keepStatusMode == DAYS:
+            days = self.settings.value('keepStatusDays', settingsWidgets['keepStatusDays'].default).toInt()[0]
+            last = now - days * 86400
+            statusHistory = []
+            for n in self.statusHistory:
+                if n.time >= last:
+                    statusHistory.append(n)
+            write(statusHistory)
+        else:
+            entries = self.settings.value('keepStatusEntries', settingsWidgets['keepStatusEntries'].default).toInt()[0]
+            write(self.statusHistory[-entries:])
 
     def clearNotificationsCache(self):
         self.notificationsHistory = []
@@ -189,34 +203,42 @@ class KdeConnect(QtGui.QSystemTrayIcon):
             print 'error writing status: {}'.format(e)
 
     def updateCache(self, notification):
-        notification.time = QtCore.QDateTime.currentMSecsSinceEpoch() / 1000
-        self.getDataDir()
-        if self.dataDir is None:
-            return
-        def write():
+        def write(notificationsHistory):
             try:
                 with open(self.notificationsHistoryPath, 'wb') as cachefile:
-                    pickle.dump(self.notificationsHistory, cachefile)
+                    pickle.dump(notificationsHistory, cachefile)
             except Exception as e:
                 print 'error writing cache: {}'.format(e)
+        notification.time = QtCore.QDateTime.currentMSecsSinceEpoch() / 1000
         data = NotificationData(notification.time, notification.app, notification.ticker, notification.id)
         if not self.notificationsHistory or notification.id > self.notificationsHistory[-1].id:
             self.notificationsHistory.append(data)
-#            print 'son quaaa {}'.format(notification.id)
-            write()
-            return
-#        print ', '.join(tuple(str(n.id) for n in reversed(self.notificationsHistory[-20:])))
-        for n in reversed(self.notificationsHistory[-20:]):
-            if n.id == notification.id and n.app == notification.app and n.ticker == notification.ticker:
-                break
-            if n.id < notification.id:
-                break
         else:
-#            print 'son qui'
-            self.notificationsHistory.append(data)
-            write()
-#        if (notification.id <= self.notificationsHistory[-1].id and self.notificationsHistory[-1].time > (time - 300)):
-#        print self.notificationsHistory
+            for n in reversed(self.notificationsHistory[-20:]):
+                if n.id == notification.id and n.app == notification.app and n.ticker == notification.ticker:
+                    break
+                if n.id < notification.id:
+                    break
+            else:
+                self.notificationsHistory.append(data)
+        self.getDataDir()
+        if self.dataDir is None:
+            return
+        keepNotificationsMode = self.settings.value('keepNotificationsMode', settingsWidgets['keepNotificationsMode'].default).toInt()[0]
+        if keepNotificationsMode == ALL:
+            write(self.notificationsHistory)
+        elif keepNotificationsMode == DAYS:
+            days = self.settings.value('keepNotificationsDays', settingsWidgets['keepNotificationsDays'].default).toInt()[0]
+            now = QtCore.QDateTime.currentMSecsSinceEpoch() / 1000
+            last = now - days * 86400
+            notificationsHistory = []
+            for n in self.notificationsHistory:
+                if n.time >= last:
+                    notificationsHistory.append(n)
+            write(notificationsHistory)
+        else:
+            entries = self.settings.value('keepNotificationsEntries', settingsWidgets['keepNotificationsEntries'].default).toInt()[0]
+            write(self.notificationsHistory[-entries:])
 
     def computeBattery(self):
         if not self.statusHistory:
