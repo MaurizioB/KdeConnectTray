@@ -597,7 +597,7 @@ class BatteryLogGraphicsObject(QtGui.QGraphicsObject):
                 charging=' (charging)' if alpha.charging else ''
                 ) if alpha.reachable else 'Offline'
             ))
-        self.pos = pos
+        self.xpos = pos
         self.npos = npos
 
     def boundingRect(self):
@@ -654,23 +654,26 @@ class StatusScene(QtGui.QGraphicsScene):
         lastDate = QtCore.QDateTime.fromMSecsSinceEpoch(data[-1].time * 1000)
         lastSecs = firstDate.secsTo(QtCore.QDateTime(lastDate.date(), QtCore.QTime(0, 0)))
 #        print firstDate, nextDate, nextSecs, lastSecs
+        dateLines = []
         while nextSecs <= lastSecs:
-            self.addLine(nextSecs, 0, nextSecs, 100, self.dateLinePen)
+            dateLines.append(self.addLine(nextSecs, 0, nextSecs, 100, self.dateLinePen))
             dateText = self.addText(nextDate.toString('dd/MM/yy'))
             dateText.setX(nextSecs)
             dateText.setFlag(dateText.ItemIgnoresTransformations, True)
             nextSecs += 86400
             nextDate = nextDate.addDays(1)
 #        print self.views()
-            
-        firstDateText = self.addText(firstDate.toString('dd/MM/yy'))
-        firstDateText.setFlag(firstDateText.ItemIgnoresTransformations, True)
+        firstLinePos = int(round(dateLines[0].boundingRect().x() / 1000.))
+        firstDateString = firstDate.toString('dd/MM/yy')
+        if QtGui.QFontMetrics(self.font()).width(firstDateString) < firstLinePos:
+            firstDateText = self.addText(firstDateString)
+            firstDateText.setFlag(firstDateText.ItemIgnoresTransformations, True)
 
     def itemActivated(self, id):
         old = self.activeItem
         if old is not None:
             old.pen = QtCore.Qt.NoPen
-            old.update
+            old.update()
         self.activeItem = self.items[id]
         self.activeItem.pen = QtCore.Qt.blue
         self.update()
@@ -699,7 +702,7 @@ class HistoryDialog(QtGui.QDialog):
         self.statusScene = StatusScene()
         self.statusView.setScene(self.statusScene)
         self.statusScene.itemClicked.connect(self.statusTable.selectRow)
-        self.statusView.resizeEvent = lambda event: self.statusView.fitInView(self.statusScene.sceneRect())
+        self.statusView.resizeEvent = self.statusViewResizeEvent
         self.statusIcons = [QtGui.QIcon(OfflineLed()), QtGui.QIcon(OnlineLed())]
         self.filterCombo.currentIndexChanged.connect(self.filterTypeChanged)
 
@@ -764,6 +767,10 @@ class HistoryDialog(QtGui.QDialog):
 
         self.computeStatsBtn.clicked.connect(self.computeStats)
 
+    def statusViewResizeEvent(self, event):
+        origin = self.statusView.mapToScene(self.statusView.viewport().pos())
+        self.statusView.fitInView(origin.x(), 0, event.size().width() * 1000, self.statusScene.sceneRect().height(), QtCore.Qt.IgnoreAspectRatio)
+
     def computeStats(self):
         if not self.statusHistory:
             return
@@ -790,6 +797,7 @@ class HistoryDialog(QtGui.QDialog):
 
     def itemActivated(self, index):
         self.statusScene.itemActivated(index.row())
+        self.statusView.ensureVisible(self.statusScene.activeItem)
 
     def eventFilter(self, source, event):
         if source == self.filterEdit and event.type() == QtCore.QEvent.KeyPress:
@@ -1825,14 +1833,4 @@ class MissingRequiredPluginDialog(QtGui.QDialog):
             showCenter(self)
             self.pluginsTable.setMaximumHeight(self.pluginsTable.sizeHintForRow(0) * len(KdeConnectRequiredPlugins) + self.pluginsTable.frameWidth() * 2)
             self.adjustSize()
-
-#    def exec_(self):
-#        self.pluginsModel.clear()
-#        self.phone = self.main.phone
-#        for missing in KdeConnectRequiredPlugins & set(map(unicode, self.phone.devIface.loadedPlugins())) ^ KdeConnectRequiredPlugins:
-#            missingItem = QtGui.QStandardItem(KdeConnectPlugins[missing].text)
-#            self.pluginsModel.appendRow(missingItem)
-#        self.show()
-#        self.pluginsTable.setMaximumHeight(self.pluginsTable.sizeHintForRow(0) * len(KdeConnectRequiredPlugins) + self.pluginsTable.frameWidth() * 2)
-#        self.adjustSize()
 

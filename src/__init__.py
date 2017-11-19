@@ -516,6 +516,9 @@ class KdeConnect(QtGui.QSystemTrayIcon):
             else:
                 self.spotify_active(False)
 
+    def aboutToQuit(self):
+        #do something, maybe write unreachable status?
+        pass
 
 
 
@@ -556,6 +559,7 @@ def main():
             app.quit()
             quit()
     trayicon = KdeConnect(app, currentID)
+    app.aboutToQuit.connect(trayicon.aboutToQuit)
     trayicon.show()
     sys.exit(app.exec_())
 
