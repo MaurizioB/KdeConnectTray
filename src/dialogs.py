@@ -318,8 +318,9 @@ class CheckBoxDelegate(QtGui.QStyledItemDelegate):
     path.lineTo(4, 8)
     path.lineTo(8, 2)
     path.lineTo(4, 6)
-    def __init__(self, *args, **kwargs):
+    def __init__(self, editable=True, *args, **kwargs):
         QtGui.QStyledItemDelegate.__init__(self, *args, **kwargs)
+        self.editable = editable
         self.square = QtCore.QRectF()
 
     def paint(self, painter, style, index):
@@ -346,6 +347,21 @@ class CheckBoxDelegate(QtGui.QStyledItemDelegate):
             painter.translate(self.square.left(), self.square.top())
             painter.drawPath(self.path)
         painter.restore()
+
+    def editorEvent(self, event, model, option, index):
+        if not self.editable:
+            return False
+        if index.flags() & QtCore.Qt.ItemIsEnabled:
+            if event.type() == QtCore.QEvent.MouseButtonPress and event.button() == QtCore.Qt.LeftButton:
+                state = index.data(QtCore.Qt.CheckStateRole).toBool()
+                model.itemFromIndex(index).setData(not state, QtCore.Qt.CheckStateRole)
+                if self.parent():
+                    selection = self.parent().selectionModel()
+                    selection.setCurrentIndex(index, selection.NoUpdate)
+            if event.type() == QtCore.QEvent.KeyPress and event.key() in (QtCore.Qt.Key_Space, QtCore.Qt.Key_Enter):
+                state = index.data(QtCore.Qt.CheckStateRole)
+                model.itemFromIndex(index).setData(not state, QtCore.Qt.CheckStateRole)
+        return True
 
 
 class IconDelegate(QtGui.QStyledItemDelegate):
@@ -1212,7 +1228,10 @@ class SettingsDialog(QtGui.QDialog):
             signal.connect(lambda: self.buttonBox.button(self.buttonBox.Apply).setEnabled(True))
             self.widgetSignals.append(widget)
 
-        self.appTable.setItemDelegateForColumn(1, TableIconDelegate())
+        self.tableIconDelegate = TableIconDelegate()
+        self.appTable.setItemDelegateForColumn(1, self.tableIconDelegate)
+        self.checkBoxDelegate = CheckBoxDelegate()
+        self.appTable.setItemDelegateForColumn(2, self.checkBoxDelegate)
         self.appModel = QtGui.QStandardItemModel()
         self.appTable.setModel(self.appModel)
         self.appModel.dataChanged.connect(self.appModelCheck)
@@ -1350,25 +1369,32 @@ class SettingsDialog(QtGui.QDialog):
         self.readSettings()
         self.buttonBox.button(self.buttonBox.Apply).setEnabled(False)
         self.appModel.clear()
-        self.appModel.setHorizontalHeaderLabels(['App name', 'Icon'])
+        self.appModel.setHorizontalHeaderLabels(['App name', 'Icon', 'Ignore'])
+        ignored = self.settings.value('ignoredApps', []).toPyObject()
+        try:
+            ignored.split(',')
+        except:
+            pass
         self.settings.beginGroup('customIcons')
         self.appList = set()
         for app in sorted(self.settings.childKeys()):
             app = unicode(app)
             self.appList.add(app)
             appItem = QtGui.QStandardItem(app)
-            iconItem = QtGui.QStandardItem()
             customValue = unicode(self.settings.value(app).toString())
             if customValue and customValue != 'false':
                 if customValue in self.main.defaultIcons:
                     icon = self.main.defaultIcons[customValue]
                 else:
                     icon = QtGui.QIcon('{}/{}.png'.format(self.main.iconsPath, app))
+                iconItem = QtGui.QStandardItem()
                 iconItem.setData(icon, QtCore.Qt.DecorationRole)
                 iconItem.setData(QtGui.QBrush(QtCore.Qt.lightGray), QtCore.Qt.BackgroundRole)
                 iconItem.setData(app, IconNameRole)
 #                iconItem.setData(iconName, QtCore.Qt.ToolTipRole)
-            self.appModel.appendRow([appItem, iconItem])
+            ignoredItem = QtGui.QStandardItem()
+            ignoredItem.setData(2 if app in ignored else 2, QtCore.Qt.CheckStateRole)
+            self.appModel.appendRow([appItem, iconItem, ignoredItem])
         defaults = {}
         unknown = {}
         for n in self.main.notificationsHistory:
@@ -1377,6 +1403,8 @@ class SettingsDialog(QtGui.QDialog):
             self.appList.add(n.app)
             appItem = QtGui.QStandardItem(n.app)
             iconItem = QtGui.QStandardItem()
+            ignoredItem = QtGui.QStandardItem()
+            ignoredItem.setData(2 if n.app in ignored else 0, QtCore.Qt.CheckStateRole)
             if n.app in self.main.defaultIcons:
                 iconName = '{}.png'.format(n.app)
                 iconItem.setData(self.main.defaultIcons[n.app], QtCore.Qt.DecorationRole)
@@ -1385,19 +1413,21 @@ class SettingsDialog(QtGui.QDialog):
                 iconItem.setData(iconName, IconNameRole)
                 iconItem.setData(iconName, QtCore.Qt.ToolTipRole)
                 appItem.setData(QtGui.QBrush(QtCore.Qt.darkGray), QtCore.Qt.ForegroundRole)
-                defaults[appItem] = iconItem
+                defaults[appItem] = [iconItem, ignoredItem]
             else:
                 appItem.setData(QtGui.QBrush(QtCore.Qt.lightGray), QtCore.Qt.ForegroundRole)
-                unknown[appItem] = iconItem
+                unknown[appItem] = [iconItem, ignoredItem]
 #            self.appModel.appendRow([appItem, iconItem])
         for app in sorted(defaults):
-            self.appModel.appendRow([app, defaults[app]])
+            self.appModel.appendRow([app] + defaults[app])
         for app in sorted(unknown):
-            self.appModel.appendRow([app, unknown[app]])
+            self.appModel.appendRow([app] + unknown[app])
         self.settings.endGroup()
         self.appTable.resizeColumnToContents(1)
+        self.appTable.resizeColumnToContents(2)
         self.appTable.horizontalHeader().setResizeMode(0, QtGui.QHeaderView.Stretch)
         self.appTable.horizontalHeader().setResizeMode(1, QtGui.QHeaderView.Fixed)
+        self.appTable.horizontalHeader().setResizeMode(2, QtGui.QHeaderView.Fixed)
         res = QtGui.QDialog.exec_(self)
         if res:
             self.setSettings()
@@ -1425,9 +1455,13 @@ class SettingsDialog(QtGui.QDialog):
             else:
                 self.settings.remove(item)
         self.settings.beginGroup('customIcons')
+        ignored = []
         for row in xrange(self.appModel.rowCount()):
             app = self.appModel.item(row, SettingsAppTableApp).text()
             iconItem = self.appModel.item(row, SettingsAppTableIcon)
+            ignoredItem = self.appModel.item(row, SettingsAppTableIgnore)
+            if ignoredItem.data(QtCore.Qt.CheckStateRole).toBool():
+                ignored.append(unicode(app))
             if not iconItem.data(EditedIconRole).toPyObject():
                 continue
             if iconItem.data(DefaultIconRole).toPyObject():
@@ -1451,6 +1485,10 @@ class SettingsDialog(QtGui.QDialog):
 #                    pm = QtGui.QPixmap(iconName).scaled(QtCore.QSize(12, 12), QtCore.Qt.KeepAspectRatio, QtCore.Qt.SmoothTransformation)
 #                self.settings.setValue(app, iconItem.data(IconNameRole))
         self.settings.endGroup()
+        if ignored:
+            self.settings.setValue('ignoredApps', ','.join(ignored))
+        else:
+            self.settings.remove('ignoredApps')
         self.settings.sync()
         self.buttonBox.button(self.buttonBox.Apply).setEnabled(False)
 
@@ -1619,7 +1657,7 @@ class DeviceDialog(QtGui.QDialog):
         self.deviceTable.setSelectionBehavior(self.deviceTable.SelectRows)
         self.deviceTable.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.deviceTable.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
-        self.deviceTable.setItemDelegateForColumn(2, CheckBoxDelegate())
+        self.deviceTable.setItemDelegateForColumn(2, CheckBoxDelegate(False))
         self.deviceTable.setEditTriggers(self.deviceTable.NoEditTriggers)
         self.deviceTable.verticalHeader().setVisible(False)
         self.deviceTable.activated.connect(self.checkPairing)

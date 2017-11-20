@@ -208,20 +208,36 @@ class ToolTipWidget(QtGui.QWidget):
             charging=charging
             ))
         showUndismissable = self.settings.value('showUndismissable', settingsWidgets['showUndismissable'].default).toBool()
+        ignored = self.settings.value('ignoredApps', []).toPyObject()
+        try:
+            ignored.split(',')
+        except:
+            pass
         delete = set()
-        dismissable = []
+        hidden = []
+        undismissable = []
         normal = []
         for id in sorted(self.phone.notifications.keys()):
             n = self.phone.notifications[id]
+            if n.app in ignored:
+                hidden.append(n)
             if not n.dismissable:
-                dismissable.append(n)
+                undismissable.append(n)
             else:
                 normal.append(n)
 
-        self.spacer.setVisible(True if (dismissable + normal and showUndismissable) or normal else False)
+        self.spacer.setVisible(True if (undismissable + normal and showUndismissable) or normal else False)
 
-        for n in dismissable + normal:
+        for n in undismissable + normal:
             if n in self.notifications:
+                if n in hidden:
+                    delete.add(n)
+                elif not n.dismissable and not showUndismissable:
+                    delete.add(n)
+                continue
+            if n in hidden:
+                if n in self.notifications:
+                    delete.add(n)
                 continue
             label = NotificationLabel(self.main, n)
             btn = QtGui.QPushButton()

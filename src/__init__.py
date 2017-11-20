@@ -436,6 +436,7 @@ class KdeConnect(QtGui.QSystemTrayIcon):
         showCenter(self.settingsDialog)
         self.settingsDialog.exec_()
         self.currentIcon = self.phone.reachable
+        self.tooltipWidget.updatePhone()
 
     def eventFilter(self, source, event):
         if event.type() == QtCore.QEvent.ToolTip:

@@ -304,7 +304,7 @@ class Device(QtCore.QObject):
             pass
 
     def allNotificationsRemoved(self):
-        print 'full remove'
+#        print 'full remove'
         for id, n in self.notifications.items():
             if n.dismissable:
                 del self.notifications[id]
@@ -392,7 +392,20 @@ class CustomIcon(QtCore.QObject):
         qp.drawLine(3, size.height() - 2, 3, size.height() - 1 - (size.height() - 2) * self.phone.battery * .01)
         notiSize = size.height() / 2.5
         showUndismissable = QtCore.QSettings().value('showUndismissable', settingsWidgets['showUndismissable'].default).toBool()
-        notifications = [n for n in self.phone.notifications.values() if n.dismissable or (not n.dismissable and showUndismissable)]
+        ignored = QtCore.QSettings().value('ignoredApps', []).toPyObject()
+        try:
+            ignored.split(',')
+        except:
+            pass
+
+        notifications = []
+        for n in self.phone.notifications.values():
+            if n.app in ignored:
+                continue
+            if not n.dismissable and not showUndismissable:
+                continue
+            notifications.append(n)
+#        notifications = [n for n in self.phone.notifications.values() if n.dismissable or (not n.dismissable and showUndismissable)]
         if notifications:
             qp.setBrush(QtCore.Qt.white)
             qp.setPen(QtCore.Qt.darkGray)

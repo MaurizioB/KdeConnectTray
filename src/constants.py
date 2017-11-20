@@ -31,7 +31,7 @@ DefaultIconRole = EditedIconRole + 1
 TimeRole = IconNameRole + 1
 PluginRole = TimeRole + 1
 
-SettingsAppTableApp, SettingsAppTableIcon = 0, 1
+SettingsAppTableApp, SettingsAppTableIcon, SettingsAppTableIgnore = 0, 1, 2
 
 OFF, ON = 0, 1
 STARTDATE, ENDDATE = 0, 1
