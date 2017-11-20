@@ -1157,6 +1157,22 @@ class PluginsDialog(QtGui.QDialog):
         self.accept()
 
 
+class TableIconDelegate(QtGui.QStyledItemDelegate):
+    noIcon = QtGui.QIcon()
+    def paint(self, painter, style, index):
+        option = QtGui.QStyleOptionViewItemV4()
+        option.__init__(style)
+        self.initStyleOption(option, index)
+        option.icon = self.noIcon
+        QtGui.QApplication.style().drawControl(QtGui.QStyle.CE_ItemViewItem, option, painter)
+        icon = index.data(QtCore.Qt.DecorationRole).toPyObject()
+        if not icon:
+            return
+        pixmap = icon.pixmap(option.rect.size())
+        p = QtCore.QPoint((option.rect.width() - pixmap.width()) / 2, (option.rect.height() - pixmap.height()) / 2)
+        painter.drawPixmap(option.rect.topLeft() + p, pixmap)
+
+
 class SettingsDialog(QtGui.QDialog):
     keepNotificationsChanged = QtCore.pyqtSignal(int, int)
     keepStatusChanged = QtCore.pyqtSignal(int, int)
@@ -1196,6 +1212,7 @@ class SettingsDialog(QtGui.QDialog):
             signal.connect(lambda: self.buttonBox.button(self.buttonBox.Apply).setEnabled(True))
             self.widgetSignals.append(widget)
 
+        self.appTable.setItemDelegateForColumn(1, TableIconDelegate())
         self.appModel = QtGui.QStandardItemModel()
         self.appTable.setModel(self.appModel)
         self.appModel.dataChanged.connect(self.appModelCheck)
@@ -1349,7 +1366,6 @@ class SettingsDialog(QtGui.QDialog):
                     icon = QtGui.QIcon('{}/{}.png'.format(self.main.iconsPath, app))
                 iconItem.setData(icon, QtCore.Qt.DecorationRole)
                 iconItem.setData(QtGui.QBrush(QtCore.Qt.lightGray), QtCore.Qt.BackgroundRole)
-                iconItem.setData(QtCore.Qt.AlignCenter, QtCore.Qt.TextAlignmentRole)
                 iconItem.setData(app, IconNameRole)
 #                iconItem.setData(iconName, QtCore.Qt.ToolTipRole)
             self.appModel.appendRow([appItem, iconItem])
