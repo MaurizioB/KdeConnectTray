@@ -32,7 +32,7 @@ Installation
 ------------
 
 Installation is optional (the script can be run from the main directory), but
-recommanded.
+recommended.
 
 Standard system installation:
 

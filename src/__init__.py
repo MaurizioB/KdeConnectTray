@@ -74,6 +74,7 @@ class KdeConnect(QtGui.QSystemTrayIcon):
         self.iconBlinkTimer.setIntervals(250, 750)
         self.iconBlinkTimer.timeoutDual.connect(self.setCurrentIcon)
         self._currentIcon = self.iconOff
+        self.activated.connect(self.showMenu)
 
 #        self.fd_iface.connect_to_signal('NameOwnerChanged', self.owner_changed)
 
@@ -331,13 +332,18 @@ class KdeConnect(QtGui.QSystemTrayIcon):
                     rem = ' (~{}h {}m)'.format(*divmod(rem, 60))
                 self.tooltipWidget.estimated = rem
 
+    def showMenu(self, reason):
+        self.tooltipWidget.hide()
+        self.tooltipWidget.mouseTimer.stop()
+        if reason == self.Context:
+            if not self.settingsDialog.isVisible():
+                self.menu.exec_(QtGui.QCursor().pos())
+            else:
+                self.settingsDialog.activateWindow()
+
     def createMenu(self):
-        def showEvent(event):
-            self.tooltipWidget.hide()
-            self.tooltipWidget.mouseTimer.stop()
         self.menu = QtGui.QMenu()
         self.menu.setSeparatorsCollapsible(False)
-        self.menu.showEvent = showEvent
         header = QtGui.QAction('KdeConnectTray', self.menu)
         header.setIcon(QtGui.QIcon('{}/kdeconnect-tray-off.svg'.format(iconsPath)))
         header.setSeparator(True)
@@ -376,7 +382,7 @@ class KdeConnect(QtGui.QSystemTrayIcon):
         quitAction.setIcon(QtGui.QIcon.fromTheme('application-exit'))
         quitAction.triggered.connect(self.quit)
         self.menu.addActions([sep, historyAction, settingsAction, aboutSep, aboutAction, quitSep, quitAction])
-        self.setContextMenu(self.menu)
+#        self.setContextMenu(self.menu)
         self.phone.pluginsChanged.connect(
             lambda: (findMyPhoneAction.setEnabled(
                 True if self.phone.reachable and self.phone.hasPlugin('kdeconnect_findmyphone') else False), 
@@ -429,6 +435,7 @@ class KdeConnect(QtGui.QSystemTrayIcon):
     def showSettings(self):
         showCenter(self.settingsDialog)
         self.settingsDialog.exec_()
+        self.currentIcon = self.phone.reachable
 
     def eventFilter(self, source, event):
         if event.type() == QtCore.QEvent.ToolTip:

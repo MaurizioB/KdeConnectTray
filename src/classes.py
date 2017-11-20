@@ -391,7 +391,7 @@ class CustomIcon(QtCore.QObject):
         qp.setPen(QtGui.QPen(QtGui.QColor(*batteryColor(self.phone.battery)), 2))
         qp.drawLine(3, size.height() - 2, 3, size.height() - 1 - (size.height() - 2) * self.phone.battery * .01)
         notiSize = size.height() / 2.5
-        showUndismissable = QtCore.QSettings().value('showUndismissable').toBool()
+        showUndismissable = QtCore.QSettings().value('showUndismissable', settingsWidgets['showUndismissable'].default).toBool()
         notifications = [n for n in self.phone.notifications.values() if n.dismissable or (not n.dismissable and showUndismissable)]
         if notifications:
             qp.setBrush(QtCore.Qt.white)

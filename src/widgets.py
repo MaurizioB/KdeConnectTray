@@ -3,6 +3,7 @@
 
 from PyQt4 import QtCore, QtGui
 from src.classes import *
+from src.constants import *
 
 class NotificationLabel(QtGui.QTextEdit):
     hideNotification = QtCore.pyqtSignal(object)
@@ -206,21 +207,18 @@ class ToolTipWidget(QtGui.QWidget):
 #            charging=' (charging{})'.format(self.estimated) if self.phone.charging else self.estimated
             charging=charging
             ))
-        showUndismissable = self.settings.value('showUndismissable').toBool()
+        showUndismissable = self.settings.value('showUndismissable', settingsWidgets['showUndismissable'].default).toBool()
         delete = set()
         dismissable = []
         normal = []
         for id in sorted(self.phone.notifications.keys()):
             n = self.phone.notifications[id]
             if not n.dismissable:
-                if not showUndismissable:
-                    delete.add(n)
-                else:
-                    dismissable.append(n)
+                dismissable.append(n)
             else:
                 normal.append(n)
 
-        self.spacer.setVisible(True if dismissable + normal else False)
+        self.spacer.setVisible(True if (dismissable + normal and showUndismissable) or normal else False)
 
         for n in dismissable + normal:
             if n in self.notifications:
@@ -231,11 +229,12 @@ class ToolTipWidget(QtGui.QWidget):
                 label.hideNotification.connect(self.dismissNotification)
                 label.hideAllNotifications.connect(lambda: [self.dismissNotification(n) for n in self.notifications.keys()])
                 btn.setIcon(self.style().standardIcon(QtGui.QStyle.SP_DialogCloseButton))
+                btn.setStyleSheet('background-color: rgba(50, 50, 50, 100);')
                 btn.setMaximumSize(22, 22)
                 btn.clicked.connect(lambda state, n=n: self.dismissNotification(n))
                 self.notificationLayout.addWidget(label)
                 self.notificationLayout.addWidget(btn, self.notificationLayout.rowCount() - 1, 1)
-            else:
+            elif showUndismissable:
                 self.notificationLayout.addWidget(label, self.notificationLayout.rowCount(), 0, 1, 2)
             self.notifications[n] = label, btn
         self.adjustSize()
