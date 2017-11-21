@@ -35,11 +35,20 @@ class BasePluginDialog(QtGui.QDialog):
 #        _ = t.ugettext
 #        self.setWindowTitle(_('Send notifications'))
 #        self.settings.beginGroup('applications')
-#        for appValue in self.settings.childGroups():
-##            self.settings.beginGroup(appValue)
-#            print [k for k in self.settings.childKeys()]
-#            print self.settings.value('size').toPyObject()
-##            self.settings.endGroup()
+#        for k in self.settings.allKeys():
+#            v = self.settings.value(k, type=QtCore.QMetaType)
+#            qv = QtCore.QVariant()
+#            v >> qv
+#            print qv.isNull()
+##            print dir(v)
+##            print v.type()
+#        print [k for k in self.settings.allKeys()]
+##        for appValue in self.settings.childGroups():
+##            print appValue
+##            print [k for k in self.settings.childKeys()]
+###            print self.settings.value(appValue).toPyObject()
+##            print self.settings.value('{}/value'.format(appValue))
+##            print self.settings.value('size').toPyObject()
 ##        print [v for v in self.settings.childGroups()]
 #        self.settings.endGroup()
 #

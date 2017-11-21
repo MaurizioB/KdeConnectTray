@@ -31,7 +31,10 @@ class DBusNotificationsManager(QtCore.QObject):
             return
         while self.idqueue:
 #            print 'chiudo'
-            self.iface.CloseNotification(self.idqueue.pop(0))
+            try:
+                self.iface.CloseNotification(self.idqueue.pop(0))
+            except:
+                pass
         self.lock.release() if self.lock.locked() else None
 
     def notificationClosed(self, id, reason):
@@ -289,10 +292,13 @@ class Device(QtCore.QObject):
         QtCore.QTimer.singleShot(1000, lambda: self.missingRequiredPlugin.emit(self.hasMissingRequiredPlugins()) if self.reachable else None)
 
     def notificationPosted(self, id):
-        notification = Notification(self, id)
-        self.notifications[id] = notification
-        self.notificationsChanged.emit()
-        self.newNotification.emit(notification)
+        try:
+            notification = Notification(self, id)
+            self.notifications[id] = notification
+            self.notificationsChanged.emit()
+            self.newNotification.emit(notification)
+        except:
+            self.notificationsChanged.emit()
 
     def notificationRemoved(self, id):
 #        print 'removed'

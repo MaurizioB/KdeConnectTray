@@ -241,9 +241,9 @@ class ToolTipWidget(QtGui.QWidget):
                 continue
             label = NotificationLabel(self.main, n)
             btn = QtGui.QPushButton()
+            label.hideAllNotifications.connect(lambda: [self.dismissNotification(n) for n in self.notifications.keys()])
             if n.dismissable:
                 label.hideNotification.connect(self.dismissNotification)
-                label.hideAllNotifications.connect(lambda: [self.dismissNotification(n) for n in self.notifications.keys()])
                 btn.setIcon(self.style().standardIcon(QtGui.QStyle.SP_DialogCloseButton))
                 btn.setStyleSheet('background-color: rgba(50, 50, 50, 100);')
                 btn.setMaximumSize(22, 22)
