@@ -792,9 +792,13 @@ class HistoryDialog(QtGui.QDialog):
 
         self.computeStatsBtn.clicked.connect(self.computeStats)
 
-    def statusViewResizeEvent(self, event):
+    def statusViewResizeEvent(self, event=None):
+        if event:
+            width = event.size().width()
+        else:
+            width = self.statusView.width()
         origin = self.statusView.mapToScene(self.statusView.viewport().pos())
-        self.statusView.fitInView(origin.x(), 0, event.size().width() * 1000, self.statusScene.sceneRect().height(), QtCore.Qt.IgnoreAspectRatio)
+        self.statusView.fitInView(origin.x(), 0, width * 1000, self.statusScene.sceneRect().height(), QtCore.Qt.IgnoreAspectRatio)
 
     def computeStats(self):
         if not self.statusHistory:
@@ -803,11 +807,27 @@ class HistoryDialog(QtGui.QDialog):
         online = 0
         states = iter(self.statusHistory)
         alpha = states.next()
+        chargingSpeeds = []
+        currentCharging = None
         while True:
             try:
                 beta = states.next()
                 if alpha.reachable:
                     online += beta.time - alpha.time
+                    if beta.reachable:
+                        if alpha.charging:
+                            if beta.charging and (alpha.battery < beta.battery):
+                                if not currentCharging:
+                                    currentCharging = [ChargeData(alpha.time, alpha.battery), ChargeData(beta.time, beta.battery)]
+                                else:
+                                    currentCharging[1] = ChargeData(beta.time, beta.battery)
+                            else:
+                                if currentCharging and currentCharging[1].battery > beta.battery:
+                                    speed = ((currentCharging[1].battery - currentCharging[0].battery) / (float(currentCharging[1].time) - currentCharging[0].time))
+                                    chargingSpeeds.append(speed)
+                                currentCharging = None
+                        else:
+                            currentCharging = None
                 else:
                     offline += beta.time - alpha.time
                 alpha = beta
@@ -819,6 +839,13 @@ class HistoryDialog(QtGui.QDialog):
         self.offlineTimeLineEdit.setText(offlineStr)
         width = max(self.fontMetrics().width(onlineStr), self.fontMetrics().width(offlineStr))
         self.onlineTimeLineEdit.setMinimumWidth(width + self.style().pixelMetric(QtGui.QStyle.PM_DefaultFrameWidth) * 2)
+
+        avgChargeSpeed = sum(chargingSpeeds) / len(chargingSpeeds)
+        self.d5ChargeTimeLineEdit.setText('~{}m'.format(int(round(5/avgChargeSpeed/60))))
+        self.d10ChargeTimeLineEdit.setText('~{}m'.format(int(round(10/avgChargeSpeed/60))))
+        fullChargeTime = int(round(95/avgChargeSpeed/60))
+        h, m = divmod(fullChargeTime, 60)
+        self.fullChargeTimeLineEdit.setText('~{}h {:02}m'.format(h, m))
 
     def itemActivated(self, index):
         self.statusScene.itemActivated(index.row())
@@ -1027,7 +1054,8 @@ class HistoryDialog(QtGui.QDialog):
         self.statusTable.horizontalHeader().setResizeMode(1, QtGui.QHeaderView.Fixed)
         self.statusTable.horizontalHeader().setResizeMode(2, QtGui.QHeaderView.Fixed)
         self.statusScene.updateData(self.statusHistory)
-        self.statusView.fitInView(self.statusScene.sceneRect())
+        self.statusViewResizeEvent()
+#        self.statusView.fitInView(self.statusScene.sceneRect())
         QtCore.QTimer.singleShot(0, lambda: self.statusTable.setFixedWidth(
             self.statusTable.verticalScrollBar().width() + \
             self.statusTable.lineWidth() * 2 + \

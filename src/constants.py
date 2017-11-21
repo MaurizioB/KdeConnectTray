@@ -15,6 +15,7 @@ stateIcons = _iconOff, _iconOn
 
 urlRegex = re.compile(r'\s((?:http(?:s)?:\/\/|ftp:\/\/)?[\d\w\@]+\.(?:[\w]{2,5})(?:(?:[\/]*(?![\,\.\:\;]\s)[\S])*)*)+')
 
+ChargeData = namedtuple('ChargeData', 'time battery')
 NotificationData = namedtuple('NotificationData', 'time app ticker id')
 PluginsData = namedtuple('PluginsData', 'text required editable enabled')
 PluginsData.__new__.__defaults__ = (False, False, True)

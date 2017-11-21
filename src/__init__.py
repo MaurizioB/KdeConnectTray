@@ -75,8 +75,8 @@ class KdeConnect(QtGui.QSystemTrayIcon):
         self.iconBlinkTimer.timeoutDual.connect(self.setCurrentIcon)
         self._currentIcon = self.iconOff
         self.activated.connect(self.showMenu)
-
 #        self.fd_iface.connect_to_signal('NameOwnerChanged', self.owner_changed)
+
 
     def testBattery(self, battery):
         print 'battery changed:', battery

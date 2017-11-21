@@ -24,6 +24,8 @@ def showCenter(widget):
 
 
 def simpleTimeFormat(time):
+    if isinstance(time, float):
+        time = int(round(time))
     if time <= 60:
         return '{}s'.format(time)
     m, s = divmod(time, 60)
