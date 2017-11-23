@@ -1300,6 +1300,7 @@ class SettingsDialog(QtGui.QDialog):
         self.keepStatusDaysSpin.valueChanged.connect(
             lambda d, lbl=self.keepStatusDaysLbl: self.setStatisticsLabel(d, lbl))
         self.cleanList = []
+        self.settingsAlertLbl.setPixmap(QtGui.QIcon.fromTheme('dialog-warning').pixmap(self.settingsAlertLbl.height()))
 
     def appClean(self):
         cleanRows = []
@@ -1442,15 +1443,18 @@ class SettingsDialog(QtGui.QDialog):
             appItem = QtGui.QStandardItem(app)
             customValue = unicode(self.settings.value(app).toString())
             iconItem = QtGui.QStandardItem()
-            if customValue and customValue != 'false':
-                if customValue in self.main.defaultIcons:
-                    icon = self.main.defaultIcons[customValue]
+            if customValue:
+                if customValue != 'false':
+                    if customValue in self.main.defaultIcons:
+                        icon = self.main.defaultIcons[customValue]
+                    else:
+                        icon = QtGui.QIcon('{}/{}.png'.format(self.main.iconsPath, app))
+                    iconItem.setData(icon, QtCore.Qt.DecorationRole)
+                    iconItem.setData(QtGui.QBrush(QtCore.Qt.lightGray), QtCore.Qt.BackgroundRole)
+                    iconItem.setData(app, IconNameRole)
+#                    iconItem.setData(iconName, QtCore.Qt.ToolTipRole)
                 else:
-                    icon = QtGui.QIcon('{}/{}.png'.format(self.main.iconsPath, app))
-                iconItem.setData(icon, QtCore.Qt.DecorationRole)
-                iconItem.setData(QtGui.QBrush(QtCore.Qt.lightGray), QtCore.Qt.BackgroundRole)
-                iconItem.setData(app, IconNameRole)
-#                iconItem.setData(iconName, QtCore.Qt.ToolTipRole)
+                    iconItem.setData('noicon', IconNameRole)
             ignoredItem = QtGui.QStandardItem()
             ignoredItem.setData(2 if app in ignored else 0, QtCore.Qt.CheckStateRole)
             self.appModel.appendRow([appItem, iconItem, ignoredItem])
@@ -1515,6 +1519,7 @@ class SettingsDialog(QtGui.QDialog):
                 self.settings.setValue(item, value)
             else:
                 self.settings.remove(item)
+
         self.settings.beginGroup('customIcons')
         ignored = []
         for row in xrange(self.appModel.rowCount()):
@@ -1525,6 +1530,9 @@ class SettingsDialog(QtGui.QDialog):
             if ignoredItem.data(QtCore.Qt.CheckStateRole).toBool():
                 ignored.append(unicode(app))
             if not iconItem.data(EditedIconRole).toPyObject():
+                iconName = iconItem.data(IconNameRole).toPyObject()
+                if not iconName or iconName == 'noicon':
+                    self.settings.remove(app)
                 continue
             iconItem.setData(False, EditedIconRole)
             if iconItem.data(DefaultIconRole).toBool():
