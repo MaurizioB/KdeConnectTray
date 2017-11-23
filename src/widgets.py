@@ -138,7 +138,7 @@ class NotificationLabel(QtGui.QTextEdit):
         self.settings.endGroup()
         if iconName == 'false':
             return '&nbsp;'
-        elif iconName and iconName != 'true':
+        elif iconName:
             return u'<img src="{}/{}.png"> '.format(self.main.iconsPath, self.app)
         elif self.app in self.main.defaultIcons:
             return u'<img src="{iconsPath}/{app}.png"> '.format(iconsPath=iconsPath, app=self.app)
@@ -226,7 +226,9 @@ class ToolTipWidget(QtGui.QWidget):
             else:
                 normal.append(n)
 
-        self.spacer.setVisible(True if (undismissable + normal and showUndismissable) or normal else False)
+        visible = set(normal + (undismissable if showUndismissable else [])) ^ set(hidden)
+#        self.spacer.setVisible(True if (undismissable + normal and showUndismissable) or normal else False)
+        self.spacer.setVisible(True if visible else False)
 
         for n in undismissable + normal:
             if n in self.notifications:
@@ -253,11 +255,11 @@ class ToolTipWidget(QtGui.QWidget):
             elif showUndismissable:
                 self.notificationLayout.addWidget(label, self.notificationLayout.rowCount(), 0, 1, 2)
             self.notifications[n] = label, btn
-        self.adjustSize()
         for n in self.notifications:
             if not n in self.phone.notifications.values():
                 delete.add(n)
         if not delete:
+            self.adjustSize()
             return
         for n in delete:
             try:
@@ -273,6 +275,7 @@ class ToolTipWidget(QtGui.QWidget):
                 n.deleteLater()
             except:
                 pass
+        self.adjustSize()
         self.dynResize()
 
     def dismissNotification(self, notification):
@@ -328,17 +331,18 @@ class ToolTipWidget(QtGui.QWidget):
         self.iconRect = geo
 
     def showEvent(self, *event):
+        self.dynResize()
         desktop = QtGui.QApplication.desktop()
         x = self.iconRect.x()
         y = self.iconRect.y()
         if x + self.width() > desktop.width():
             x = desktop.width() - self.width() - 4
         elif x < 0:
-            x = 0
+            x = 4
         if y > 10:
             y = self.iconRect.y() - self.height() - 4
         else:
-            y += self.iconRect.height()
+            y += self.iconRect.height() + 4
         self.move(x, y)
         self.mouseTimer.start()
 

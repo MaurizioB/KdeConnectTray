@@ -41,6 +41,7 @@ class KdeConnect(QtGui.QSystemTrayIcon):
 
         self.historyDialog = HistoryDialog(self)
         self.settingsDialog = SettingsDialog(self)
+        self.settingsDialog.settingsApplied.connect(self.settingsApplied)
         self.missingRequiredPluginDialog = MissingRequiredPluginDialog(self)
         self.loadData()
         self.dbus = dbus.SessionBus()
@@ -435,6 +436,8 @@ class KdeConnect(QtGui.QSystemTrayIcon):
     def showSettings(self):
         showCenter(self.settingsDialog)
         self.settingsDialog.exec_()
+
+    def settingsApplied(self):
         self.currentIcon = self.phone.reachable
         self.tooltipWidget.updatePhone()
 

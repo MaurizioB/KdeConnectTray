@@ -22,6 +22,10 @@ def showCenter(widget):
     widget.move(currentGeo.x() + currentGeo.width() / 2 - widget.width() / 2, 
         currentGeo.y() + currentGeo.height() / 2 - widget.height() / 2)
 
+def menuSeparator(parent=None, caption=''):
+    sep = QtGui.QAction(caption, parent) if caption else QtGui.QAction(parent)
+    sep.setSeparator(True)
+    return sep
 
 def simpleTimeFormat(time):
     if isinstance(time, float):

@@ -417,7 +417,7 @@ class IconEditDialog(QtGui.QDialog):
         layout = QtGui.QGridLayout()
         self.setLayout(layout)
         if editable:
-            label = QtGui.QLabel('Select icon for this app:'.format(self.app))
+            label = QtGui.QLabel('Select icon for this app:')
             layout.addWidget(label, 0, 0, 1, 4)
             self.appEdit = QtGui.QLineEdit(self.app)
             self.appEdit.textChanged.connect(self.appEditChanged)
@@ -523,9 +523,11 @@ class IconEditDialog(QtGui.QDialog):
         layout.addWidget(self.clearBtn, 1, 4 if editable else 3)
 
         self.buttonBox = QtGui.QDialogButtonBox(QtGui.QDialogButtonBox.Ok|QtGui.QDialogButtonBox.Cancel)
-        self.buttonBox.button(QtGui.QDialogButtonBox.Cancel).clicked.connect(self.reject)
-        self.buttonBox.button(QtGui.QDialogButtonBox.Ok).clicked.connect(self.accept)
+        self.buttonBox.button(self.buttonBox.Cancel).clicked.connect(self.reject)
+        self.buttonBox.button(self.buttonBox.Ok).clicked.connect(self.accept)
         layout.addWidget(self.buttonBox, 2, 0, 1, layout.columnCount())
+        if not self.app:
+            self.buttonBox.button(self.buttonBox.Ok).setEnabled(False)
 
     def setCurrentIndex(self, i):
         self.currentItem = self.iconCombo.model().item(i, 0)
@@ -550,6 +552,8 @@ class IconEditDialog(QtGui.QDialog):
             self.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(True)
             self.appEdit.setStyleSheet('')
             self.appChanged = False
+        if not text:
+            self.buttonBox.button(self.buttonBox.Ok).setEnabled(False)
 
     def browse(self):
         iconName = QtGui.QFileDialog.getOpenFileName(self, 
@@ -1229,6 +1233,7 @@ class TableIconDelegate(QtGui.QStyledItemDelegate):
 class SettingsDialog(QtGui.QDialog):
     keepNotificationsChanged = QtCore.pyqtSignal(int, int)
     keepStatusChanged = QtCore.pyqtSignal(int, int)
+    settingsApplied = QtCore.pyqtSignal()
     changedSignals = (
         'keepNotifications', 
         'keepStatus', 
@@ -1240,6 +1245,7 @@ class SettingsDialog(QtGui.QDialog):
         self.main = main
         self.settings = QtCore.QSettings()
         self.changeDeviceBtn.clicked.connect(self.changeDevice)
+        self.applyBtn = self.buttonBox.button(self.buttonBox.Apply)
 
         self.notifyBatteryDischargeAlertIntervalsEdit.setValidator(LowBatteryAlertValidator())
         self.notifyBatteryDischargeAlertIntervalsEdit.focusOutEvent = self.batteryAlertCheck
@@ -1257,12 +1263,12 @@ class SettingsDialog(QtGui.QDialog):
                 for child in data.children:
                     widget = getattr(self, '{name}{child}{type}'.format(name=item, child=child.label, type=widgetNameSignals[child.data].label))
                     signal = getattr(widget, widgetNameSignals[child.data].data)
-                    signal.connect(lambda: self.buttonBox.button(self.buttonBox.Apply).setEnabled(True))
+                    signal.connect(lambda: self.applyBtn.setEnabled(True))
                     self.widgetSignals.append(widget)
                 continue
             widget = getattr(self, '{name}{type}'.format(name=item, type=widgetNameSignals[data.type].label))
             signal = getattr(widget, widgetNameSignals[data.type].data)
-            signal.connect(lambda: self.buttonBox.button(self.buttonBox.Apply).setEnabled(True))
+            signal.connect(lambda: self.applyBtn.setEnabled(True))
             self.widgetSignals.append(widget)
 
         self.tableIconDelegate = TableIconDelegate()
@@ -1274,12 +1280,8 @@ class SettingsDialog(QtGui.QDialog):
         self.appModel.dataChanged.connect(self.appModelCheck)
         self.appTable.customContextMenuRequested.connect(self.appMenu)
         self.appTable.doubleClicked.connect(self.appDoubleClick)
-#        self.appTable.doubleClicked.connect(self.enableDelAppBtn)
-#        self.appTable.clicked.connect(self.enableDelAppBtn)
-#        self.appTable.activated.connect(self.enableDelAppBtn)
-        self.appTable.selectionModel().selectionChanged.connect(self.enableDelAppBtn)
-        self.addAppBtn.setIcon(QtGui.QIcon.fromTheme('document-new'))
-        self.delAppBtn.setIcon(QtGui.QIcon.fromTheme('edit-delete'))
+        self.cleanAppBtn.setIcon(QtGui.QIcon.fromTheme('edit-delete'))
+        self.cleanAppBtn.clicked.connect(self.appClean)
 
         self.keepNotificationsModeGroup.setId(self.keepNotificationsModeAllRadio, ALL)
         self.keepNotificationsModeGroup.setId(self.keepNotificationsModeDaysRadio, DAYS)
@@ -1289,7 +1291,7 @@ class SettingsDialog(QtGui.QDialog):
         self.keepStatusModeGroup.setId(self.keepStatusModeEntriesRadio, ENTRIES)
         self.keepNotificationsChk.toggled.connect(self.keepNotificationsEnable)
         self.keepStatusChk.toggled.connect(self.keepStatusEnable)
-        self.buttonBox.button(self.buttonBox.Apply).clicked.connect(self.setSettings)
+        self.applyBtn.clicked.connect(self.setSettings)
         self.clearNotificationsBtn.clicked.connect(self.clearNotificationsCache)
         self.clearStatusBtn.clicked.connect(self.clearStatusCache)
 
@@ -1297,6 +1299,23 @@ class SettingsDialog(QtGui.QDialog):
             lambda d, lbl=self.keepNotificationsDaysLbl: self.setStatisticsLabel(d, lbl))
         self.keepStatusDaysSpin.valueChanged.connect(
             lambda d, lbl=self.keepStatusDaysLbl: self.setStatisticsLabel(d, lbl))
+        self.cleanList = []
+
+    def appClean(self):
+        cleanRows = []
+        self.cleanList = []
+        for row in xrange(self.appModel.rowCount()):
+            app = self.appModel.item(row, SettingsAppTableApp).text()
+            for n in self.main.notificationsHistory:
+                if n.app == app:
+                    break
+            else:
+                cleanRows.append(row)
+                self.cleanList.append(app)
+        for row in reversed(cleanRows):
+            self.appModel.takeRow(row)
+        if self.cleanList:
+            self.applyBtn.setEnabled(True)
 
     def changeDevice(self):
         deviceDialog = DeviceDialog(self.main.phone.id, self, alert=True)
@@ -1352,6 +1371,9 @@ class SettingsDialog(QtGui.QDialog):
                 iconItem.setData(None, QtCore.Qt.BackgroundRole)
         self.appModel.blockSignals(False)
 
+    def enableApplyBtn(self, *args):
+        self.applyBtn.setEnabled(True)
+
     def enableDelAppBtn(self, selected, deselected):
         indexes = any(index.sibling(index.row(), 1).data(QtCore.Qt.DecorationRole).toPyObject() is not None for index in self.appTable.selectionModel().selection().indexes())
         self.delAppBtn.setEnabled(indexes)
@@ -1404,7 +1426,7 @@ class SettingsDialog(QtGui.QDialog):
         self.tabWidget.setCurrentIndex(0)
         self.main.historyDialog.hide()
         self.readSettings()
-        self.buttonBox.button(self.buttonBox.Apply).setEnabled(False)
+        self.applyBtn.setEnabled(False)
         self.appModel.clear()
         self.appModel.setHorizontalHeaderLabels(['App name', 'Icon', 'Ignore'])
         ignored = self.settings.value('ignoredApps', []).toPyObject()
@@ -1419,18 +1441,18 @@ class SettingsDialog(QtGui.QDialog):
             self.appList.add(app)
             appItem = QtGui.QStandardItem(app)
             customValue = unicode(self.settings.value(app).toString())
+            iconItem = QtGui.QStandardItem()
             if customValue and customValue != 'false':
                 if customValue in self.main.defaultIcons:
                     icon = self.main.defaultIcons[customValue]
                 else:
                     icon = QtGui.QIcon('{}/{}.png'.format(self.main.iconsPath, app))
-                iconItem = QtGui.QStandardItem()
                 iconItem.setData(icon, QtCore.Qt.DecorationRole)
                 iconItem.setData(QtGui.QBrush(QtCore.Qt.lightGray), QtCore.Qt.BackgroundRole)
                 iconItem.setData(app, IconNameRole)
 #                iconItem.setData(iconName, QtCore.Qt.ToolTipRole)
             ignoredItem = QtGui.QStandardItem()
-            ignoredItem.setData(2 if app in ignored else 2, QtCore.Qt.CheckStateRole)
+            ignoredItem.setData(2 if app in ignored else 0, QtCore.Qt.CheckStateRole)
             self.appModel.appendRow([appItem, iconItem, ignoredItem])
         defaults = {}
         unknown = {}
@@ -1449,6 +1471,7 @@ class SettingsDialog(QtGui.QDialog):
                 iconItem.setData(QtCore.Qt.AlignCenter, QtCore.Qt.TextAlignmentRole)
                 iconItem.setData(iconName, IconNameRole)
                 iconItem.setData(iconName, QtCore.Qt.ToolTipRole)
+                iconItem.setData(True, DefaultIconRole)
                 appItem.setData(QtGui.QBrush(QtCore.Qt.darkGray), QtCore.Qt.ForegroundRole)
                 defaults[appItem] = [iconItem, ignoredItem]
             else:
@@ -1465,12 +1488,13 @@ class SettingsDialog(QtGui.QDialog):
         self.appTable.horizontalHeader().setResizeMode(0, QtGui.QHeaderView.Stretch)
         self.appTable.horizontalHeader().setResizeMode(1, QtGui.QHeaderView.Fixed)
         self.appTable.horizontalHeader().setResizeMode(2, QtGui.QHeaderView.Fixed)
+        self.appModel.dataChanged.connect(self.enableApplyBtn)
         res = QtGui.QDialog.exec_(self)
+        self.appModel.dataChanged.disconnect(self.enableApplyBtn)
         if res:
             self.setSettings()
         return res
 
-    
     def setSettings(self):
         for item, data in settingsWidgets.items():
             if data.type == GROUP:
@@ -1494,22 +1518,27 @@ class SettingsDialog(QtGui.QDialog):
         self.settings.beginGroup('customIcons')
         ignored = []
         for row in xrange(self.appModel.rowCount()):
-            app = self.appModel.item(row, SettingsAppTableApp).text()
+            appItem = self.appModel.item(row, SettingsAppTableApp)
+            app = appItem.text()
             iconItem = self.appModel.item(row, SettingsAppTableIcon)
             ignoredItem = self.appModel.item(row, SettingsAppTableIgnore)
             if ignoredItem.data(QtCore.Qt.CheckStateRole).toBool():
                 ignored.append(unicode(app))
             if not iconItem.data(EditedIconRole).toPyObject():
                 continue
-            if iconItem.data(DefaultIconRole).toPyObject():
+            iconItem.setData(False, EditedIconRole)
+            if iconItem.data(DefaultIconRole).toBool():
                 self.settings.remove(app)
             else:
+                appItem.setData(QtGui.QBrush(QtCore.Qt.lightGray), QtCore.Qt.ForegroundRole)
                 iconName = unicode(iconItem.data(IconNameRole).toPyObject())
                 #TODO: check for write errors
-                if iconName.startswith('/'):
+                if not iconName or iconName == 'noicon':
+                    self.settings.setValue(app, False)
+                elif iconName.startswith('/'):
                     if not saveIcon(iconName, unicode(app)):
                         print 'error saving {} to {}'.format(app, iconName)
-                        return
+                        continue
                     self.settings.setValue(app, 'true')
                 else:
                     dest = QtCore.QFile(u'{}/{}.png'.format(self.main.iconsPath, app))
@@ -1517,17 +1546,21 @@ class SettingsDialog(QtGui.QDialog):
                         dest.remove()
                     if not QtCore.QFile.copy('{iconsPath}/{iconName}'.format(iconsPath=iconsPath, iconName=iconName), dest.fileName()):
                         print 'error saving {} to {}'.format(app, iconName)
-                        return
+                        continue
                     self.settings.setValue(app, 'true')
 #                    pm = QtGui.QPixmap(iconName).scaled(QtCore.QSize(12, 12), QtCore.Qt.KeepAspectRatio, QtCore.Qt.SmoothTransformation)
 #                self.settings.setValue(app, iconItem.data(IconNameRole))
+        for app in self.cleanList:
+            self.settings.remove(app)
         self.settings.endGroup()
         if ignored:
             self.settings.setValue('ignoredApps', ','.join(ignored))
         else:
             self.settings.remove('ignoredApps')
         self.settings.sync()
-        self.buttonBox.button(self.buttonBox.Apply).setEnabled(False)
+        self.applyBtn.setEnabled(False)
+        self.settingsApplied.emit()
+        self.update()
 
     def readSettings(self):
         for w in self.widgetSignals:
@@ -1583,49 +1616,58 @@ class SettingsDialog(QtGui.QDialog):
         if not index.isValid():
             return
         appIndex = index.sibling(index.row(), 0)
-        iconIndex = index.sibling(index.row(), 1)
-        iconItem = self.appModel.itemFromIndex(iconIndex)
+        iconItem = self.appModel.itemFromIndex(index.sibling(index.row(), SettingsAppTableIcon))
+        ignoredItem = self.appModel.itemFromIndex(index.sibling(index.row(), SettingsAppTableIgnore))
         app = unicode(appIndex.data().toString())
         menu = QtGui.QMenu(self)
-        editItem = QtGui.QAction('Edit "{}"...'.format(app), self)
-        resetItem = QtGui.QAction('Reset icon for "{}"'.format(app), self)
-        if not app in self.main.defaultIcons:
-            resetItem.setEnabled(False)
-        clearItem = QtGui.QAction('Clear icon for "{}"'.format(app), self)
-        if iconIndex.data(QtCore.Qt.DecorationRole).toPyObject() is None:
-            clearItem.setEnabled(False)
-        menu.addActions([editItem, resetItem, clearItem])
+        menu.setSeparatorsCollapsible(False)
+        header = menuSeparator(self, app)
+        setItalic(header)
+        header.setIcon(iconItem.icon())
+        header.setIconVisibleInMenu(True)
+        editAction = QtGui.QAction('Edit...', self)
+        resetAction = QtGui.QAction('Reset icon', self)
+        if not app in self.main.defaultIcons or iconItem.data(DefaultIconRole).toBool():
+            resetAction.setEnabled(False)
+        clearAction = QtGui.QAction('Clear icon', self)
+        if iconItem.data(QtCore.Qt.DecorationRole).toPyObject() is None:
+            clearAction.setEnabled(False)
+        
+        ignoredAction = QtGui.QAction('Always show' if ignoredItem.data(QtCore.Qt.CheckStateRole).toBool() else 'Always ignore', self)
+        menu.addActions([header, editAction, resetAction, clearAction, menuSeparator(self), ignoredAction])
+
         res = menu.exec_(self.appTable.viewport().mapToGlobal(pos))
         if not res:
             return
-        if res == editItem:
+        if res == editAction:
             self.iconEdit(app, appIndex.row())
-        elif res == clearItem:
+        elif res == clearAction:
 #            self.appModel.itemFromIndex(appIndex).setData(QtGui.QBrush(QtCore.Qt.darkGray), QtCore.Qt.ForegroundRole)
             iconItem.setData(None, QtCore.Qt.DecorationRole)
             iconItem.setData(True, EditedIconRole)
             iconItem.setData(False, DefaultIconRole)
             iconItem.setData('noicon', IconNameRole)
-            self.buttonBox.button(self.buttonBox.Apply).setEnabled(True)
-        elif res == resetItem:
+            self.applyBtn.setEnabled(True)
+        elif res == resetAction:
             iconItem.setData(self.main.defaultIcons[app], QtCore.Qt.DecorationRole)
             iconItem.setData(True, EditedIconRole)
             iconItem.setData(True, DefaultIconRole)
             iconItem.setData('{}.png'.format(app), IconNameRole)
-            self.buttonBox.button(self.buttonBox.Apply).setEnabled(True)
+            self.applyBtn.setEnabled(True)
+        elif res == ignoredAction:
+            ignoredItem.setData(not ignoredItem.data(QtCore.Qt.CheckStateRole).toBool(), QtCore.Qt.CheckStateRole)
 
     def iconEdit(self, app, row):
         dialog = IconEditDialog(self, app, True, self.appList)
         if not dialog.exec_():
             return
-        self.buttonBox.button(self.buttonBox.Apply).setEnabled(True)
+        self.applyBtn.setEnabled(True)
         if dialog.appChanged:
             oldApp = app
             app = dialog.appEdit.text()
             self.appModel.item(row, 0).setText(app)
             self.appList.remove(unicode(oldApp))
             self.appList.add(unicode(app))
-            self.buttonBox.button(self.buttonBox.Apply).setEnabled(True)
         if dialog.iconChanged:
             self.settings.beginGroup('customIcons')
             iconItem = self.appModel.item(row, SettingsAppTableIcon)
@@ -1641,13 +1683,12 @@ class SettingsDialog(QtGui.QDialog):
                 self.settings.endGroup()
                 return
             if dialog.iconName:
-                iconItem.setData(QtGui.QIcon(dialog.iconName), QtCore.Qt.DecorationRole)
+                iconItem.setData(dialog.currentItem.data(QtCore.Qt.DecorationRole), QtCore.Qt.DecorationRole)
                 iconItem.setData(dialog.iconName, IconNameRole)
             else:
                 iconItem.setData(None, QtCore.Qt.DecorationRole)
                 iconItem.setData('noicon', IconNameRole)
             self.settings.endGroup()
-            self.buttonBox.button(self.buttonBox.Apply).setEnabled(True)
 
 
 class DeviceDialog(QtGui.QDialog):

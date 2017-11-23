@@ -346,26 +346,13 @@
        <string>Device Notifications</string>
       </attribute>
       <layout class="QGridLayout" name="gridLayout_2">
-       <item row="0" column="0">
-        <widget class="QCheckBox" name="showUndismissableChk">
-         <property name="toolTip">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Uncheck this if you don't want to display undismissable notifications (such as system notifications and so on)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-         </property>
-         <property name="text">
-          <string>Show persistent (not dismissable) notifications</string>
-         </property>
-         <property name="checked">
-          <bool>true</bool>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="0">
+       <item row="4" column="0">
         <widget class="QTableView" name="appTable">
          <property name="contextMenuPolicy">
           <enum>Qt::CustomContextMenu</enum>
          </property>
          <property name="toolTip">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Double or right click an app to edit its icon settings.&lt;/p&gt;&lt;p&gt;Apps shown in &lt;span style=&quot; font-weight:600;&quot;&gt;bold&lt;/span&gt; use custom icons (including &lt;span style=&quot; font-style:italic;&quot;&gt;unset&lt;/span&gt; default icons).&lt;/p&gt;&lt;p&gt;Those which are grayed out use default icons settings.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; text-decoration: underline;&quot;&gt;Lightened&lt;/span&gt; apps (if present) are currently in the notification history, but have not been set yet.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Double click or right click an app to edit its icon settings.&lt;/p&gt;&lt;p&gt;Apps shown in &lt;span style=&quot; font-weight:600;&quot;&gt;bold&lt;/span&gt; use custom icons (including &lt;span style=&quot; font-style:italic;&quot;&gt;unset&lt;/span&gt; default icons).&lt;/p&gt;&lt;p&gt;Those which are &lt;span style=&quot; font-style:italic;&quot;&gt;grayed out&lt;/span&gt; use default icons settings.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; text-decoration: underline;&quot;&gt;Lightened&lt;/span&gt; apps (if present) are currently in the notification history, but have not been set yet.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
          <property name="editTriggers">
           <set>QAbstractItemView::NoEditTriggers</set>
@@ -388,47 +375,25 @@
          </property>
         </widget>
        </item>
-       <item row="2" column="0">
-        <widget class="QLabel" name="label">
+       <item row="0" column="0">
+        <widget class="QCheckBox" name="showUndismissableChk">
+         <property name="toolTip">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Uncheck this if you don't want to display undismissable notifications (such as system notifications and so on)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
          <property name="text">
-          <string>Known Apps:</string>
+          <string>Show persistent (not dismissable) notifications</string>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
          </property>
         </widget>
        </item>
-       <item row="4" column="0">
+       <item row="3" column="0">
         <layout class="QHBoxLayout" name="horizontalLayout">
          <item>
-          <widget class="QPushButton" name="addAppBtn">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Create new App notification setting&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-           </property>
+          <widget class="QLabel" name="label">
            <property name="text">
-            <string/>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="delAppBtn">
-           <property name="enabled">
-            <bool>false</bool>
-           </property>
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Remove currently selected App&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-           </property>
-           <property name="text">
-            <string/>
+            <string>Known Apps:</string>
            </property>
           </widget>
          </item>
@@ -444,6 +409,22 @@
             </size>
            </property>
           </spacer>
+         </item>
+         <item>
+          <widget class="QToolButton" name="cleanAppBtn">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="toolTip">
+            <string>Clean unexisting entries...</string>
+           </property>
+           <property name="text">
+            <string>Clean up...</string>
+           </property>
+          </widget>
          </item>
         </layout>
        </item>
@@ -781,6 +762,10 @@
   </layout>
  </widget>
  <tabstops>
+  <tabstop>devicePluginsBtn</tabstop>
+  <tabstop>changeDeviceBtn</tabstop>
+  <tabstop>lowBatteryIconBlinkChk</tabstop>
+  <tabstop>lowBatteryIconBlinkValueSpin</tabstop>
   <tabstop>desktopNotificationsChk</tabstop>
   <tabstop>notifyReachableChk</tabstop>
   <tabstop>notifyUnreachableChk</tabstop>
@@ -789,10 +774,12 @@
   <tabstop>notifyBatteryChargeAlertChk</tabstop>
   <tabstop>notifyBatteryChargeAlertIntervalsEdit</tabstop>
   <tabstop>notifyBatteryChargeResetBtn</tabstop>
+  <tabstop>notifyBatteryDischargeAlertChk</tabstop>
+  <tabstop>notifyBatteryDischargeAlertIntervalsEdit</tabstop>
+  <tabstop>notifyBatteryDischargeAlertResetBtn</tabstop>
   <tabstop>showUndismissableChk</tabstop>
+  <tabstop>cleanAppBtn</tabstop>
   <tabstop>appTable</tabstop>
-  <tabstop>addAppBtn</tabstop>
-  <tabstop>delAppBtn</tabstop>
   <tabstop>keepNotificationsChk</tabstop>
   <tabstop>clearNotificationsBtn</tabstop>
   <tabstop>keepNotificationsModeAllRadio</tabstop>
@@ -807,8 +794,8 @@
   <tabstop>keepStatusDaysSpin</tabstop>
   <tabstop>keepStatusModeEntriesRadio</tabstop>
   <tabstop>keepStatusEntriesSpin</tabstop>
-  <tabstop>tabWidget</tabstop>
   <tabstop>buttonBox</tabstop>
+  <tabstop>tabWidget</tabstop>
  </tabstops>
  <resources/>
  <connections>
@@ -819,8 +806,8 @@
    <slot>accept()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>250</x>
-     <y>541</y>
+     <x>256</x>
+     <y>487</y>
     </hint>
     <hint type="destinationlabel">
      <x>157</x>
@@ -835,8 +822,8 @@
    <slot>reject()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>318</x>
-     <y>541</y>
+     <x>324</x>
+     <y>487</y>
     </hint>
     <hint type="destinationlabel">
      <x>286</x>
@@ -919,7 +906,7 @@
      <y>417</y>
     </hint>
     <hint type="destinationlabel">
-     <x>374</x>
+     <x>367</x>
      <y>422</y>
     </hint>
    </hints>
@@ -935,7 +922,7 @@
      <y>417</y>
     </hint>
     <hint type="destinationlabel">
-     <x>422</x>
+     <x>415</x>
      <y>423</y>
     </hint>
    </hints>
@@ -951,7 +938,7 @@
      <y>379</y>
     </hint>
     <hint type="destinationlabel">
-     <x>374</x>
+     <x>367</x>
      <y>384</y>
     </hint>
    </hints>
@@ -967,7 +954,7 @@
      <y>379</y>
     </hint>
     <hint type="destinationlabel">
-     <x>422</x>
+     <x>415</x>
      <y>385</y>
     </hint>
    </hints>
