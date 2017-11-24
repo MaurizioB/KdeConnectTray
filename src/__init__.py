@@ -455,7 +455,7 @@ class KdeConnect(QtGui.QSystemTrayIcon):
 
     def activate(self):
         try:
-            self.phone.setProxy(self.dbus)
+            self.phone.setProxy()
             self.createMenu()
             return True
         except Exception as e:

@@ -217,8 +217,8 @@ class Device(QtCore.QObject):
         QtCore.QObject.__init__(self)
         self.id = deviceID
         self._reachable = False
-        self._battery = 0
         self.batteryAlert = 15
+        self._battery = 0
         self._charging = False
         self.name = ''
         self.proxy = None
@@ -228,23 +228,21 @@ class Device(QtCore.QObject):
         self.notificationIface = None
         self._notifications = NotificationDict(self)
 
-    def setProxy(self, bus):
-        self.dbus = bus
+    def setProxy(self):
+        self.dbus = dbus.SessionBus()
         self.proxy = self.dbus.get_object('org.kde.kdeconnect', '/modules/kdeconnect/devices/{}'.format(self.id))
         self.propsIface = dbus.Interface(self.proxy, dbus_interface='org.freedesktop.DBus.Properties')
 
         self.devIface = dbus.Interface(self.proxy, dbus_interface='org.kde.kdeconnect.device')
         self.devIface.connect_to_signal('reachableStatusChanged', lambda: self.setReachable(self.propsIface.Get('org.kde.kdeconnect.device', 'isReachable')))
+        self.devIface.connect_to_signal('reachableStatusChanged', lambda: self.setIFaces() if self.propsIface.Get('org.kde.kdeconnect.device', 'isReachable') else None)
         self.devIface.connect_to_signal('pluginsChanged', self.pluginsChangedCheck)
 #            self.phoneDeviceProps.connect_to_signal('PropertiesChanged', self.reachable)
-        self.batteryIface = dbus.Interface(self.proxy, dbus_interface='org.kde.kdeconnect.device.battery')
-        self.batteryIface.connect_to_signal('chargeChanged', self.setBattery)
-        self.batteryIface.connect_to_signal('stateChanged', self.setCharging)
-
-        self.notificationIface = dbus.Interface(self.proxy, dbus_interface='org.kde.kdeconnect.device.notifications')
-        self.notificationIface.connect_to_signal('notificationPosted', self.notificationPosted)
-        self.notificationIface.connect_to_signal('notificationRemoved', self.notificationRemoved)
-        self.notificationIface.connect_to_signal('allNotificationsRemoved', self.allNotificationsRemoved)
+        try:
+            self.setIFaces()
+        except:
+            self.battery = self._battery
+            self.charging = self._charging
 
         self.findMyPhoneIface = dbus.Interface(
             self.dbus.get_object('org.kde.kdeconnect', '/modules/kdeconnect/devices/{}/findmyphone'.format(self.id)), 
@@ -256,9 +254,24 @@ class Device(QtCore.QObject):
 
         self.reachable = self.propsIface.Get('org.kde.kdeconnect.device', 'isReachable')
         self.name = self.propsIface.Get('org.kde.kdeconnect.device', 'name')
+        try:
+            self.createNotifications()
+        except:
+            pass
+
+    def setIFaces(self):
+        if self.batteryIface and self.notificationIface:
+            return
+        self.batteryIface = dbus.Interface(self.proxy, dbus_interface='org.kde.kdeconnect.device.battery')
+        self.batteryIface.connect_to_signal('chargeChanged', self.setBattery)
+        self.batteryIface.connect_to_signal('stateChanged', self.setCharging)
         self.battery = self.batteryIface.charge()
         self.charging = self.batteryIface.isCharging()
-        self.createNotifications()
+
+        self.notificationIface = dbus.Interface(self.proxy, dbus_interface='org.kde.kdeconnect.device.notifications')
+        self.notificationIface.connect_to_signal('notificationPosted', self.notificationPosted)
+        self.notificationIface.connect_to_signal('notificationRemoved', self.notificationRemoved)
+        self.notificationIface.connect_to_signal('allNotificationsRemoved', self.allNotificationsRemoved)
 
     def hasPlugin(self, plugin):
         if self.devIface is None:
