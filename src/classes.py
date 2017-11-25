@@ -26,20 +26,23 @@ class DBusNotificationsManager(QtCore.QObject):
         self.closeTimer.timeout.connect(self.closeNotification)
 
     def closeNotification(self):
-        if not self.idqueue:
-            self.lock.release() if self.lock.locked() else None
-            return
+        if not self.idqueue and self.lock.locked():
+            self.lock.release()
+#            return
         while self.idqueue:
 #            print 'chiudo'
+            id = self.idqueue.pop(0)
             try:
-                self.iface.CloseNotification(self.idqueue.pop(0))
-            except:
-                pass
-        self.lock.release() if self.lock.locked() else None
+                self.iface.CloseNotification(id)
+            except Exception as e:
+                print 'Error closing notification {}: {}'.format(id, e)
+        if self.lock.locked():
+            self.lock.release()
 
     def notificationClosed(self, id, reason):
         self.idqueue.pop(self.idqueue.index(id))
-        self.lock.release() if self.lock.locked() else None
+        if self.lock.locked():
+            self.lock.release()
 
     def run(self):
         while True:
@@ -50,28 +53,28 @@ class DBusNotificationsManager(QtCore.QObject):
                 if self.lock.locked():
                     self.closeTimer.stop()
                     self.lock.release()
-#                    self.closeNotification()
+                self.closeNotification()
             self.lock.acquire()
             title, body, icon, timeout = res
             try:
                 id = self.iface.Notify('KdeConnectTray', 0, icon, title, body, [], {}, 0)
-                if id not in self.idqueue:
+                if id and id not in self.idqueue:
                     self.idqueue.append(id)
             except dbus.exceptions.DBusException as e:
                 print 'DBus exception?', e
                 self.iface = dbus.Interface(self.proxy, dbus_interface='org.freedesktop.Notifications')
                 id = self.iface.Notify('KdeConnectTray', 0, icon, title, body, [], {}, 0)
-                if id not in self.idqueue:
+                if id and id not in self.idqueue:
                     self.idqueue.append(id)
             self.closeTimer.setInterval(timeout)
             self.closeTimer.start()
-        self.lock.release() if self.lock.locked() else None
+        if self.lock.locked():
+            self.lock.release()
         self.closeNotification()
         self.finished.emit()
 
     def notify(self, title='KdeConnectTray', body='', icon=True, timeout=5000, priority=LOW):
         if not QtCore.QSettings().value('desktopNotifications', True).toBool():
-#            print 'bobbou'
             return
         if isinstance(icon, bool):
             icon = stateIcons[icon]
