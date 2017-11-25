@@ -226,6 +226,8 @@ class Device(QtCore.QObject):
         self.devIface = None
         self.batteryIface = None
         self.notificationIface = None
+        self.findMyPhoneIface = None
+        self.shareIface = None
         self._notifications = NotificationDict(self)
 
     def setProxy(self):
@@ -244,14 +246,6 @@ class Device(QtCore.QObject):
             self.battery = self._battery
             self.charging = self._charging
 
-        self.findMyPhoneIface = dbus.Interface(
-            self.dbus.get_object('org.kde.kdeconnect', '/modules/kdeconnect/devices/{}/findmyphone'.format(self.id)), 
-            dbus_interface='org.kde.kdeconnect.device.findmyphone')
-
-        self.shareIface = dbus.Interface(
-            self.dbus.get_object('org.kde.kdeconnect', '/modules/kdeconnect/devices/{}/share'.format(self.id)), 
-            dbus_interface='org.kde.kdeconnect.device.share')
-
         self.reachable = self.propsIface.Get('org.kde.kdeconnect.device', 'isReachable')
         self.name = self.propsIface.Get('org.kde.kdeconnect.device', 'name')
         try:
@@ -260,18 +254,35 @@ class Device(QtCore.QObject):
             pass
 
     def setIFaces(self):
-        if self.batteryIface and self.notificationIface:
-            return
-        self.batteryIface = dbus.Interface(self.proxy, dbus_interface='org.kde.kdeconnect.device.battery')
-        self.batteryIface.connect_to_signal('chargeChanged', self.setBattery)
-        self.batteryIface.connect_to_signal('stateChanged', self.setCharging)
-        self.battery = self.batteryIface.charge()
-        self.charging = self.batteryIface.isCharging()
+        if not self.batteryIface:
+            self.batteryIface = dbus.Interface(self.proxy, dbus_interface='org.kde.kdeconnect.device.battery')
+            self.batteryIface.connect_to_signal('chargeChanged', self.setBattery)
+            self.batteryIface.connect_to_signal('stateChanged', self.setCharging)
+            self.battery = self.batteryIface.charge()
+            self.charging = self.batteryIface.isCharging()
 
-        self.notificationIface = dbus.Interface(self.proxy, dbus_interface='org.kde.kdeconnect.device.notifications')
-        self.notificationIface.connect_to_signal('notificationPosted', self.notificationPosted)
-        self.notificationIface.connect_to_signal('notificationRemoved', self.notificationRemoved)
-        self.notificationIface.connect_to_signal('allNotificationsRemoved', self.allNotificationsRemoved)
+        if not self.notificationIface:
+            self.notificationIface = dbus.Interface(self.proxy, dbus_interface='org.kde.kdeconnect.device.notifications')
+            self.notificationIface.connect_to_signal('notificationPosted', self.notificationPosted)
+            self.notificationIface.connect_to_signal('notificationRemoved', self.notificationRemoved)
+            self.notificationIface.connect_to_signal('allNotificationsRemoved', self.allNotificationsRemoved)
+
+        if not self.findMyPhoneIface:
+            try:
+                self.findMyPhoneIface = dbus.Interface(
+                    self.dbus.get_object('org.kde.kdeconnect', '/modules/kdeconnect/devices/{}/findmyphone'.format(self.id)), 
+                    dbus_interface='org.kde.kdeconnect.device.findmyphone')
+            except:
+                pass
+
+        if not self.shareIface:
+            try:
+                self.shareIface = dbus.Interface(
+                    self.dbus.get_object('org.kde.kdeconnect', '/modules/kdeconnect/devices/{}/share'.format(self.id)), 
+                    dbus_interface='org.kde.kdeconnect.device.share')
+            except:
+                pass
+
 
     def hasPlugin(self, plugin):
         if self.devIface is None:
