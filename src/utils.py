@@ -6,7 +6,7 @@ from PyQt4 import QtCore, QtGui, uic
 
 #basePath = os.path.dirname(os.path.abspath(__file__))
 basePath = os.path.abspath(os.path.join(__file__, os.pardir, os.pardir))
-iconsPath = os.path.join(basePath, 'icons')
+defaultIconsPath = os.path.join(basePath, 'icons')
 
 def loadUi(uiFileName, widget):
     return uic.loadUi(os.path.join(basePath, 'dialogs', uiFileName), widget)

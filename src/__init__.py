@@ -19,7 +19,7 @@ from src.widgets import *
 
 class KdeConnect(QtGui.QSystemTrayIcon):
     def __init__(self, parent, deviceID):
-        self.iconOff = QtGui.QIcon('{}/kdeconnect-tray-off.svg'.format(iconsPath))
+        self.iconOff = QtGui.QIcon('{}/kdeconnect-tray-off.svg'.format(defaultIconsPath))
         QtGui.QSystemTrayIcon.__init__(self, self.iconOff, parent)
         self.phone = Device(deviceID)
         self.notifier = DBusNotificationsManager(self)
@@ -65,7 +65,7 @@ class KdeConnect(QtGui.QSystemTrayIcon):
         self.tooltipWidget = ToolTipWidget(self, self.phone)
         self.setToolTip('')
         self.defaultIcons = {}
-        for _iconPath in glob('{}/*'.format(iconsPath)):
+        for _iconPath in glob('{}/*'.format(defaultIconsPath)):
                 _iconName = os.path.basename(_iconPath)
                 self.defaultIcons[_iconName[:-4]] = QtGui.QIcon(_iconPath)
         self.notifierThread.start()
@@ -346,7 +346,7 @@ class KdeConnect(QtGui.QSystemTrayIcon):
         self.menu = QtGui.QMenu()
         self.menu.setSeparatorsCollapsible(False)
         header = QtGui.QAction('KdeConnectTray', self.menu)
-        header.setIcon(QtGui.QIcon('{}/kdeconnect-tray-off.svg'.format(iconsPath)))
+        header.setIcon(QtGui.QIcon('{}/kdeconnect-tray-off.svg'.format(defaultIconsPath)))
         header.setSeparator(True)
         self.menu.addAction(header)
 

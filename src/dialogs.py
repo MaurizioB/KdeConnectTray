@@ -1299,12 +1299,12 @@ class SettingsDialog(QtGui.QDialog):
             lambda d, lbl=self.keepNotificationsDaysLbl: self.setStatisticsLabel(d, lbl))
         self.keepStatusDaysSpin.valueChanged.connect(
             lambda d, lbl=self.keepStatusDaysLbl: self.setStatisticsLabel(d, lbl))
-        self.cleanList = []
+        self.cleanList = set()
         self.settingsAlertLbl.setPixmap(QtGui.QIcon.fromTheme('dialog-warning').pixmap(self.settingsAlertLbl.height()))
 
     def appClean(self):
         cleanRows = []
-        self.cleanList = []
+        cleanList = []
         for row in xrange(self.appModel.rowCount()):
             app = self.appModel.item(row, SettingsAppTableApp).text()
             for n in self.main.notificationsHistory:
@@ -1312,11 +1312,12 @@ class SettingsDialog(QtGui.QDialog):
                     break
             else:
                 cleanRows.append(row)
-                self.cleanList.append(app)
+                cleanList.append(app)
         for row in reversed(cleanRows):
             self.appModel.takeRow(row)
-        if self.cleanList:
+        if cleanList:
             self.applyBtn.setEnabled(True)
+        self.cleanList.update(cleanList)
 
     def changeDevice(self):
         deviceDialog = DeviceDialog(self.main.phone.id, self, alert=True)
@@ -1499,6 +1500,11 @@ class SettingsDialog(QtGui.QDialog):
             self.setSettings()
         return res
 
+    def removeIcon(self, app):
+        dest = QtCore.QFile(u'{}/{}.png'.format(self.main.iconsPath, app))
+        if dest.exists():
+            dest.remove()
+
     def setSettings(self):
         for item, data in settingsWidgets.items():
             if data.type == GROUP:
@@ -1532,16 +1538,21 @@ class SettingsDialog(QtGui.QDialog):
             if not iconItem.data(EditedIconRole).toPyObject():
                 iconName = iconItem.data(IconNameRole).toPyObject()
                 if not iconName or iconName == 'noicon':
+                    self.removeIcon(app)
                     self.settings.remove(app)
+                elif app in self.main.defaultIcons:
+                    self.removeIcon(app)
                 continue
             iconItem.setData(False, EditedIconRole)
             if iconItem.data(DefaultIconRole).toBool():
                 self.settings.remove(app)
+                self.removeIcon(app)
             else:
                 appItem.setData(QtGui.QBrush(QtCore.Qt.lightGray), QtCore.Qt.ForegroundRole)
                 iconName = unicode(iconItem.data(IconNameRole).toPyObject())
                 #TODO: check for write errors
                 if not iconName or iconName == 'noicon':
+                    self.removeIcon(app)
                     self.settings.setValue(app, False)
                 elif iconName.startswith('/'):
                     if not saveIcon(iconName, unicode(app)):
@@ -1549,10 +1560,8 @@ class SettingsDialog(QtGui.QDialog):
                         continue
                     self.settings.setValue(app, 'true')
                 else:
-                    dest = QtCore.QFile(u'{}/{}.png'.format(self.main.iconsPath, app))
-                    if dest.exists():
-                        dest.remove()
-                    if not QtCore.QFile.copy('{iconsPath}/{iconName}'.format(iconsPath=iconsPath, iconName=iconName), dest.fileName()):
+                    self.removeIcon(app)
+                    if not QtCore.QFile.copy('{}/{}'.format(defaultIconsPath, iconName), dest.fileName()):
                         print 'error saving {} to {}'.format(app, iconName)
                         continue
                     self.settings.setValue(app, 'true')
@@ -1560,6 +1569,9 @@ class SettingsDialog(QtGui.QDialog):
 #                self.settings.setValue(app, iconItem.data(IconNameRole))
         for app in self.cleanList:
             self.settings.remove(app)
+            dest = QtCore.QFile(u'{}/{}.png'.format(self.main.iconsPath, app))
+            if dest.exists():
+                dest.remove()
         self.settings.endGroup()
         if ignored:
             self.settings.setValue('ignoredApps', ','.join(ignored))

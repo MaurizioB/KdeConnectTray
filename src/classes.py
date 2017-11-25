@@ -402,7 +402,7 @@ class Device(QtCore.QObject):
 
 
 class CustomIcon(QtCore.QObject):
-    def __init__(self, phone, base='{}/kdeconnect-tray-on.svg'.format(iconsPath)):
+    def __init__(self, phone, base='{}/kdeconnect-tray-on.svg'.format(defaultIconsPath)):
         QtCore.QObject.__init__(self)
         self.base = QtSvg.QSvgRenderer(base)
         self.phone = phone

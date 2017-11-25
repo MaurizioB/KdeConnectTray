@@ -141,7 +141,7 @@ class NotificationLabel(QtGui.QTextEdit):
         elif iconName:
             return u'<img src="{}/{}.png"> '.format(self.main.iconsPath, self.app)
         elif self.app in self.main.defaultIcons:
-            return u'<img src="{iconsPath}/{app}.png"> '.format(iconsPath=iconsPath, app=self.app)
+            return u'<img src="{}/{}.png"> '.format(defaultIconsPath, self.app)
         else:
             return '&nbsp;'
 

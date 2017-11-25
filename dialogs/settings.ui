@@ -365,7 +365,7 @@
           <enum>Qt::CustomContextMenu</enum>
          </property>
          <property name="toolTip">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Double click or right click an app to edit its icon settings.&lt;/p&gt;&lt;p&gt;Apps shown in &lt;span style=&quot; font-weight:600;&quot;&gt;bold&lt;/span&gt; use custom icons (including &lt;span style=&quot; font-style:italic;&quot;&gt;unset&lt;/span&gt; default icons).&lt;/p&gt;&lt;p&gt;Those which are &lt;span style=&quot; font-style:italic;&quot;&gt;grayed out&lt;/span&gt; use default icons settings.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; text-decoration: underline;&quot;&gt;Lightened&lt;/span&gt; apps (if present) are currently in the notification history, but have not been set yet.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Double click or right click an app to edit its icon settings.&lt;/p&gt;&lt;p&gt;Apps which are &lt;span style=&quot; font-style:italic;&quot;&gt;grayed out&lt;/span&gt; use default icons settings.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; text-decoration: underline;&quot;&gt;Lightened&lt;/span&gt; apps (if present) are currently in the notification history, but have not been set yet.&lt;/p&gt;&lt;p&gt;Ignored apps will never be shown in the notifications list, but will be stored in the cache.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
          <property name="editTriggers">
           <set>QAbstractItemView::NoEditTriggers</set>
@@ -412,10 +412,10 @@
             </sizepolicy>
            </property>
            <property name="toolTip">
-            <string>Clean unexisting entries...</string>
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Clean unexisting entries&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
            <property name="text">
-            <string>Clean up...</string>
+            <string>Clean up</string>
            </property>
           </widget>
          </item>
