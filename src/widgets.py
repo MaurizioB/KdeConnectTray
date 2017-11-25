@@ -198,7 +198,7 @@ class ToolTipWidget(QtGui.QWidget):
             if self.phone.battery == 100:
                 charging = ' (charged!)'
             else:
-                charging = ' (charging{}'.format(self.estimated)
+                charging = ' (charging{})'.format(self.estimated)
         else:
             charging = self.estimated
         self.batteryLabel.setText('<font color="#{color}">{battery}%</font>{charging}'.format(
@@ -299,9 +299,9 @@ class ToolTipWidget(QtGui.QWidget):
         self.updatePhone()
 
     def dynResize(self):
+        self.adjustSize()
         if self.iconRect.y() < 100:
             #sopra
-            self.adjustSize()
             return
         #sotto
         self.setGeometry(self.x(), self.y() + self.height() - self.sizeHint().height(), self.width(), self.sizeHint().height())

@@ -456,7 +456,9 @@ class CustomIcon(QtCore.QObject):
             qp.drawText(notiRect, QtCore.Qt.AlignCenter, str(notifLen))
         if self.phone.charging:
             qp.setBrush(QtGui.QColor(50, 200, 255))
-            qp.setPen(QtGui.QPen(QtCore.Qt.darkGray, .5))
+            qp.setPen(QtGui.QPen(QtCore.Qt.black, .5))
+            qp.save()
+            qp.translate(2, 0)
             path = QtGui.QPainterPath()
             path.lineTo(2, 0)
             path.lineTo(2, -1.5)
@@ -473,6 +475,7 @@ class CustomIcon(QtCore.QObject):
             path.closeSubpath()
             qp.translate(2, size.height() - path.boundingRect().height() + 1)
             qp.drawPath(path)
+            qp.restore()
         self.icon.addPixmap(self.pixmap)
         return self.icon
 

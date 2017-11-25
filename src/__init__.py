@@ -310,15 +310,15 @@ class KdeConnect(QtGui.QSystemTrayIcon):
         speed = float(diff) / time
         if self.phone.charging:
             if (latest.battery < first.battery):
-                self.tooltipWidget.estimated = '?)'
+                self.tooltipWidget.estimated = '?'
             else:
                 rem = int(divmod((100 - latest.battery) / speed, 60)[0])
                 if rem <= 1:
                     rem = ''
                 elif rem <= 60:
-                    rem = ' ~{}m)'.format(rem)
+                    rem = ' ~{}m'.format(rem)
                 else:
-                    rem = ' ~{}h {}m)'.format(*divmod(rem, 60))
+                    rem = ' ~{}h {}m'.format(*divmod(rem, 60))
                 self.tooltipWidget.estimated = rem
         else:
             if (latest.battery > first.battery):
